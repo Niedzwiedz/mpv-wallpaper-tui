@@ -13,68 +13,59 @@ func (m *Model) View() string {
 	if m.width == 0 {
 		return "Loading…"
 	}
+	if m.modalOpen {
+		return lipgloss.Place(
+			m.width, m.height,
+			lipgloss.Center, lipgloss.Center,
+			m.monitorModal(),
+		)
+	}
+	return m.mainView()
+}
+
+func (m *Model) mainView() string {
 	innerH := m.availH() - 4
-	help := helpStyle.Render("  ↑/k ↓/j  navigate    l/→ open    h/← close    tab  switch section    ↵/space  apply    q  quit")
 	panels := lipgloss.JoinHorizontal(lipgloss.Top,
 		m.listPanel(innerH),
 		m.previewPanel(innerH),
 	)
 	return lipgloss.NewStyle().
 		Margin(marginV, marginH).
-		Render(panels + "\n" + help)
+		Render(panels + "\n" + m.helpBar())
 }
+
+func (m *Model) helpBar() string {
+	mon := m.selectedMonitor()
+	return helpStyle.Render(
+		"  ↑/k ↓/j  navigate    l/→ open    h/← close    ↵/space  apply" +
+			"    m: monitor(" + mon.Label() + ")" +
+			"    q  quit",
+	)
+}
+
+// ── List panel ────────────────────────────────────────────────────────────────
 
 func (m *Model) listPanel(innerH int) string {
 	contentW := listPanelW - 4 // border (2) + manual padding (2)
 	listH := m.wallpaperListH()
 
-	var lines []string
-
-	// ── Wallpaper section ─────────────────────────────────────────────────────
-	wallpaperFocused := m.focus == sectionWallpapers
-	lines = append(lines,
+	lines := []string{
 		titleStyle.Width(contentW).Render("Wallpapers"),
 		"",
-	)
+	}
 
 	end := min(m.scroll+listH, len(m.flat))
 	for i := m.scroll; i < end; i++ {
-		e := m.flat[i]
-		label := truncate(m.entryLabel(e), contentW-3)
-		switch {
-		case i == m.cursor && wallpaperFocused:
+		label := truncate(m.entryLabel(m.flat[i]), contentW-3)
+		if i == m.cursor {
 			lines = append(lines, selectedStyle.Width(contentW).Render(label))
-		case i == m.cursor:
-			lines = append(lines, activeStyle.Width(contentW).Render(label))
-		default:
+		} else {
 			lines = append(lines, itemStyle.Width(contentW).Render(label))
 		}
 	}
-	// Pad to fill the wallpaper section height so the separator stays anchored.
+	// Pad remaining rows so the panel height stays stable.
 	for i := end - m.scroll; i < listH; i++ {
 		lines = append(lines, "")
-	}
-
-	// ── Separator ─────────────────────────────────────────────────────────────
-	lines = append(lines, dimStyle.Render(strings.Repeat("─", contentW)))
-
-	// ── Monitor section ───────────────────────────────────────────────────────
-	monitorFocused := m.focus == sectionMonitors
-	lines = append(lines,
-		titleStyle.Width(contentW).Render("Monitor"),
-		"",
-	)
-
-	for i, mon := range m.monitors {
-		label := truncate(mon.Label(), contentW-3)
-		switch {
-		case i == m.monitorCursor && monitorFocused:
-			lines = append(lines, selectedStyle.Width(contentW).Render(label))
-		case i == m.monitorCursor:
-			lines = append(lines, activeStyle.Width(contentW).Render(label))
-		default:
-			lines = append(lines, itemStyle.Width(contentW).Render(label))
-		}
 	}
 
 	return panelStyle.
@@ -83,7 +74,6 @@ func (m *Model) listPanel(innerH int) string {
 		Render(strings.Join(lines, "\n"))
 }
 
-// entryLabel builds the display string for a flat entry.
 func (m *Model) entryLabel(e flatEntry) string {
 	indent := strings.Repeat("  ", e.depth)
 	if e.node.IsDir {
@@ -95,6 +85,8 @@ func (m *Model) entryLabel(e flatEntry) string {
 	}
 	return indent + "  " + e.node.Name
 }
+
+// ── Preview panel ─────────────────────────────────────────────────────────────
 
 func (m *Model) previewPanel(innerH int) string {
 	w := m.availW() - listPanelW - 3
@@ -120,13 +112,42 @@ func (m *Model) previewContent() string {
 	if rendered, ok := m.previews[w.Path]; ok {
 		mon := m.selectedMonitor()
 		header := titleStyle.Render(w.Name) +
-			"  " + dimStyle.Render("↵ apply  →  "+mon.Label())
+			"  " + dimStyle.Render("↵ apply → "+mon.Label())
 		return header + "\n" + rendered
 	}
 	return "\n  " + dimStyle.Render("Loading preview…")
 }
 
-// countDescendants returns the total number of video file descendants of n.
+// ── Monitor modal ─────────────────────────────────────────────────────────────
+
+func (m *Model) monitorModal() string {
+	contentW := m.modalContentW
+
+	var lines []string
+	lines = append(lines,
+		titleStyle.Width(contentW-4).Render("Select Monitor"),
+		"",
+	)
+	for i, mon := range m.monitors {
+		label := mon.Label()
+		if i == m.monitorCursor {
+			lines = append(lines, selectedStyle.Width(contentW-4).Render(label))
+		} else {
+			lines = append(lines, itemStyle.Width(contentW-4).Render(label))
+		}
+	}
+	lines = append(lines,
+		"",
+		dimStyle.Render("↑/k ↓/j  navigate    ↵  confirm    esc  cancel"),
+	)
+
+	return panelStyle.
+		Width(contentW - 2).
+		Render(strings.Join(lines, "\n"))
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
 func countDescendants(n *domain.Node) int {
 	if !n.IsDir {
 		return 1
@@ -145,7 +166,6 @@ func plural(n int) string {
 	return "s"
 }
 
-// truncate shortens s to max runes, appending "…" if needed.
 func truncate(s string, max int) string {
 	runes := []rune(s)
 	if len(runes) <= max {

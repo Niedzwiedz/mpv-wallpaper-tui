@@ -12,14 +12,6 @@ const (
 	marginV    = 1  // top AND bottom margin in terminal rows (each side)
 )
 
-// section identifies which part of the left panel has keyboard focus.
-type section uint8
-
-const (
-	sectionWallpapers section = iota
-	sectionMonitors
-)
-
 // flatEntry is one visible row in the wallpaper tree.
 type flatEntry struct {
 	node  *domain.Node
@@ -30,17 +22,19 @@ type flatEntry struct {
 // Dependencies are injected via New; the model owns only UI state.
 type Model struct {
 	roots    []*domain.Node
-	expanded map[string]bool // set of expanded directory paths
-	flat     []flatEntry     // visible depth-first flattened tree
+	expanded map[string]bool
+	flat     []flatEntry
 	cursor   int
 	scroll   int // first visible index in the wallpaper list
 
-	monitors      []domain.Monitor
-	monitorCursor int
-	focus         section
+	monitors           []domain.Monitor
+	monitorCursor      int
+	savedMonitorCursor int
+	modalOpen          bool
+	modalContentW      int // pre-computed modal width
 
-	previews map[string]string // path → rendered preview string
-	loading  map[string]bool   // paths currently being rendered
+	previews map[string]string
+	loading  map[string]bool
 
 	width  int
 	height int
@@ -56,14 +50,21 @@ func New(
 	player domain.Player,
 	previewer domain.Previewer,
 ) *Model {
+	modalW := 36
+	for _, mon := range monitors {
+		if l := len([]rune(mon.Label())) + 6; l > modalW {
+			modalW = l
+		}
+	}
 	m := &Model{
-		roots:     roots,
-		expanded:  make(map[string]bool),
-		monitors:  monitors,
-		previews:  make(map[string]string),
-		loading:   make(map[string]bool),
-		player:    player,
-		previewer: previewer,
+		roots:         roots,
+		expanded:      make(map[string]bool),
+		monitors:      monitors,
+		previews:      make(map[string]string),
+		loading:       make(map[string]bool),
+		player:        player,
+		previewer:     previewer,
+		modalContentW: modalW,
 	}
 	m.flat = buildFlat(roots, m.expanded, 0)
 	return m
@@ -71,7 +72,6 @@ func New(
 
 func (m *Model) Init() tea.Cmd { return nil }
 
-// current returns the flat entry under the cursor, or nil.
 func (m *Model) current() *flatEntry {
 	if m.cursor < 0 || m.cursor >= len(m.flat) {
 		return nil
@@ -79,7 +79,6 @@ func (m *Model) current() *flatEntry {
 	return &m.flat[m.cursor]
 }
 
-// currentWallpaper returns the Wallpaper for the cursor if it is a file node.
 func (m *Model) currentWallpaper() *domain.Wallpaper {
 	e := m.current()
 	if e == nil || e.node.IsDir {
@@ -89,21 +88,16 @@ func (m *Model) currentWallpaper() *domain.Wallpaper {
 	return &w
 }
 
-// selectedMonitor returns the currently selected monitor.
 func (m *Model) selectedMonitor() domain.Monitor {
 	if m.monitorCursor < 0 || m.monitorCursor >= len(m.monitors) {
-		return domain.Monitor{ID: "ALL"}
+		return domain.Monitor{ID: domain.AllMonitorsID}
 	}
 	return m.monitors[m.monitorCursor]
 }
 
-// availW returns the usable terminal width after applying horizontal margins.
 func (m *Model) availW() int { return m.width - marginH*2 }
-
-// availH returns the usable terminal height after applying vertical margins.
 func (m *Model) availH() int { return m.height - marginV*2 }
 
-// previewDims returns usable (cols, rows) for the image preview area.
 func (m *Model) previewDims() (cols, rows int) {
 	cols = m.availW() - listPanelW - 3
 	rows = m.availH() - 6
@@ -116,22 +110,15 @@ func (m *Model) previewDims() (cols, rows int) {
 	return
 }
 
-// wallpaperListH returns how many rows the wallpaper list can show.
-// It subtracts the monitor section and decorations from the panel height.
+// wallpaperListH returns how many rows the wallpaper list can display.
 func (m *Model) wallpaperListH() int {
-	innerH := m.availH() - 4
-	// header (title + blank) = 2
-	// separator = 1
-	// monitor section (title + blank + items) = 2 + len(monitors)
-	overhead := 2 + 1 + 2 + len(m.monitors)
-	h := innerH - overhead
+	h := m.availH() - 4 - 2 // panel innerH minus list header (title + blank)
 	if h < 1 {
 		h = 1
 	}
 	return h
 }
 
-// clampScroll adjusts m.scroll so the cursor stays within the visible window.
 func (m *Model) clampScroll() {
 	h := m.wallpaperListH()
 	if m.cursor < m.scroll {
@@ -145,7 +132,6 @@ func (m *Model) clampScroll() {
 	}
 }
 
-// rebuildFlat recomputes the visible flat list and keeps cursor/scroll valid.
 func (m *Model) rebuildFlat() {
 	m.flat = buildFlat(m.roots, m.expanded, 0)
 	if m.cursor >= len(m.flat) {
@@ -154,7 +140,6 @@ func (m *Model) rebuildFlat() {
 	m.clampScroll()
 }
 
-// buildFlat produces a depth-first flat list of visible nodes.
 func buildFlat(nodes []*domain.Node, expanded map[string]bool, depth int) []flatEntry {
 	var out []flatEntry
 	for _, n := range nodes {

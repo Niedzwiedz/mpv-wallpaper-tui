@@ -1,7 +1,5 @@
 package domain
 
-import "fmt"
-
 // Wallpaper is a video file that can be applied as a desktop wallpaper.
 // It is the value passed to Player and Previewer.
 type Wallpaper struct {
@@ -23,6 +21,9 @@ func (n *Node) Wallpaper() Wallpaper {
 	return Wallpaper{Name: n.Name, Path: n.Path}
 }
 
+// AllMonitorsID is the sentinel monitor ID that targets every display output.
+const AllMonitorsID = "ALL"
+
 // Monitor represents a display output.
 type Monitor struct {
 	ID         string // passed to mpvpaper, e.g. "ALL", "eDP-1", "DP-3"
@@ -34,7 +35,7 @@ func (m Monitor) Label() string {
 	if m.Resolution == "" {
 		return m.ID
 	}
-	return fmt.Sprintf("%s  %s", m.ID, m.Resolution)
+	return m.ID + "  " + m.Resolution
 }
 
 // Repository loads the wallpaper tree from a source.

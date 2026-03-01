@@ -18,7 +18,7 @@ type MonitorDetector struct{}
 func NewMonitorDetector() *MonitorDetector { return &MonitorDetector{} }
 
 func (d *MonitorDetector) List() []domain.Monitor {
-	all := domain.Monitor{ID: "ALL"}
+	all := domain.Monitor{ID: domain.AllMonitorsID}
 
 	for _, fn := range []func() []domain.Monitor{
 		fromHyprctl,

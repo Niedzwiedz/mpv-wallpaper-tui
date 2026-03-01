@@ -10,30 +10,30 @@ import (
 
 // MpvPlayer applies wallpapers via mpvpaper, tracking one PID per monitor
 // in a state file so only the relevant process is replaced on each apply.
-type MpvPlayer struct{}
+type MpvPlayer struct {
+	pids map[string]int
+}
 
-func NewMpvPlayer() *MpvPlayer { return &MpvPlayer{} }
+func NewMpvPlayer() *MpvPlayer { return &MpvPlayer{pids: readPIDs()} }
 
 func (p *MpvPlayer) Apply(w domain.Wallpaper, monitor domain.Monitor) error {
-	pids := readPIDs()
-
-	if monitor.ID == "ALL" {
-		// Replacing ALL: kill every tracked process.
-		for _, pid := range pids {
+	if monitor.ID == domain.AllMonitorsID {
+		// Replacing ALL: kill every tracked process then clear the map.
+		for _, pid := range p.pids {
 			killIfMpvpaper(pid)
 		}
-		pids = make(map[string]int)
+		clear(p.pids)
 	} else {
 		// Replacing a specific monitor: kill the ALL process if one is running
 		// (it covers every output, so it would conflict), then kill the
 		// existing process for this monitor only.
-		if pid, ok := pids["ALL"]; ok {
+		if pid, ok := p.pids[domain.AllMonitorsID]; ok {
 			killIfMpvpaper(pid)
-			delete(pids, "ALL")
+			delete(p.pids, domain.AllMonitorsID)
 		}
-		if pid, ok := pids[monitor.ID]; ok {
+		if pid, ok := p.pids[monitor.ID]; ok {
 			killIfMpvpaper(pid)
-			delete(pids, monitor.ID)
+			delete(p.pids, monitor.ID)
 		}
 	}
 
@@ -48,7 +48,7 @@ func (p *MpvPlayer) Apply(w domain.Wallpaper, monitor domain.Monitor) error {
 		return err
 	}
 
-	pids[monitor.ID] = cmd.Process.Pid
-	writePIDs(pids) //nolint:errcheck
+	p.pids[monitor.ID] = cmd.Process.Pid
+	writePIDs(p.pids) //nolint:errcheck
 	return nil
 }
