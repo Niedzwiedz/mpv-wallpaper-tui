@@ -3,7 +3,7 @@ package ui
 import "github.com/charmbracelet/lipgloss"
 
 var (
-	orange = lipgloss.Color("208")
+	orange = lipgloss.Color("#ffa07a")
 	muted  = lipgloss.Color("240")
 	black  = lipgloss.Color("0")
 
