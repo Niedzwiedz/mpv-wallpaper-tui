@@ -18,10 +18,18 @@ var (
 	itemStyle = lipgloss.NewStyle().
 			PaddingLeft(2)
 
+	// selectedStyle: cursor is here AND this section is focused.
 	selectedStyle = lipgloss.NewStyle().
 			PaddingLeft(2).
 			Background(orange).
 			Foreground(black).
+			Bold(true)
+
+	// activeStyle: item is selected but this section is not focused
+	// (e.g. the chosen monitor while navigating wallpapers).
+	activeStyle = lipgloss.NewStyle().
+			PaddingLeft(2).
+			Foreground(orange).
 			Bold(true)
 
 	helpStyle = lipgloss.NewStyle().

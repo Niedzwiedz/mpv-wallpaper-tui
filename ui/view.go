@@ -13,29 +13,66 @@ func (m *Model) View() string {
 	if m.width == 0 {
 		return "Loading…"
 	}
-	innerH := m.height - 4
-	help := helpStyle.Render("  ↑/k ↓/j  navigate    l/→ open    h/← close    ↵/space  apply    q  quit")
+	innerH := m.availH() - 4
+	help := helpStyle.Render("  ↑/k ↓/j  navigate    l/→ open    h/← close    tab  switch section    ↵/space  apply    q  quit")
 	panels := lipgloss.JoinHorizontal(lipgloss.Top,
 		m.listPanel(innerH),
 		m.previewPanel(innerH),
 	)
-	return panels + "\n" + help
+	return lipgloss.NewStyle().
+		Margin(marginV, marginH).
+		Render(panels + "\n" + help)
 }
 
 func (m *Model) listPanel(innerH int) string {
 	contentW := listPanelW - 4 // border (2) + manual padding (2)
+	listH := m.wallpaperListH()
 
-	lines := []string{
+	var lines []string
+
+	// ── Wallpaper section ─────────────────────────────────────────────────────
+	wallpaperFocused := m.focus == sectionWallpapers
+	lines = append(lines,
 		titleStyle.Width(contentW).Render("Wallpapers"),
 		"",
+	)
+
+	end := min(m.scroll+listH, len(m.flat))
+	for i := m.scroll; i < end; i++ {
+		e := m.flat[i]
+		label := truncate(m.entryLabel(e), contentW-3)
+		switch {
+		case i == m.cursor && wallpaperFocused:
+			lines = append(lines, selectedStyle.Width(contentW).Render(label))
+		case i == m.cursor:
+			lines = append(lines, activeStyle.Width(contentW).Render(label))
+		default:
+			lines = append(lines, itemStyle.Width(contentW).Render(label))
+		}
+	}
+	// Pad to fill the wallpaper section height so the separator stays anchored.
+	for i := end - m.scroll; i < listH; i++ {
+		lines = append(lines, "")
 	}
 
-	for i, e := range m.flat {
-		label := m.entryLabel(e)
-		label = truncate(label, contentW-3)
-		if i == m.cursor {
+	// ── Separator ─────────────────────────────────────────────────────────────
+	lines = append(lines, dimStyle.Render(strings.Repeat("─", contentW)))
+
+	// ── Monitor section ───────────────────────────────────────────────────────
+	monitorFocused := m.focus == sectionMonitors
+	lines = append(lines,
+		titleStyle.Width(contentW).Render("Monitor"),
+		"",
+	)
+
+	for i, mon := range m.monitors {
+		label := truncate(mon.Label(), contentW-3)
+		switch {
+		case i == m.monitorCursor && monitorFocused:
 			lines = append(lines, selectedStyle.Width(contentW).Render(label))
-		} else {
+		case i == m.monitorCursor:
+			lines = append(lines, activeStyle.Width(contentW).Render(label))
+		default:
 			lines = append(lines, itemStyle.Width(contentW).Render(label))
 		}
 	}
@@ -46,8 +83,7 @@ func (m *Model) listPanel(innerH int) string {
 		Render(strings.Join(lines, "\n"))
 }
 
-// entryLabel builds the display string for a flat entry, including
-// depth indentation and a directory expand/collapse indicator.
+// entryLabel builds the display string for a flat entry.
 func (m *Model) entryLabel(e flatEntry) string {
 	indent := strings.Repeat("  ", e.depth)
 	if e.node.IsDir {
@@ -61,7 +97,7 @@ func (m *Model) entryLabel(e flatEntry) string {
 }
 
 func (m *Model) previewPanel(innerH int) string {
-	w := m.width - listPanelW - 3
+	w := m.availW() - listPanelW - 3
 	if w < 10 {
 		w = 10
 	}
@@ -82,7 +118,9 @@ func (m *Model) previewContent() string {
 	}
 	w := e.node.Wallpaper()
 	if rendered, ok := m.previews[w.Path]; ok {
-		header := titleStyle.Render(w.Name) + "  " + dimStyle.Render("↵ apply")
+		mon := m.selectedMonitor()
+		header := titleStyle.Render(w.Name) +
+			"  " + dimStyle.Render("↵ apply  →  "+mon.Label())
 		return header + "\n" + rendered
 	}
 	return "\n  " + dimStyle.Render("Loading preview…")

@@ -6,7 +6,19 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-const listPanelW = 38 // total rendered width of the left panel including border
+const (
+	listPanelW = 38 // total rendered width of the left panel including border
+	marginH    = 2  // left AND right margin in terminal columns (each side)
+	marginV    = 1  // top AND bottom margin in terminal rows (each side)
+)
+
+// section identifies which part of the left panel has keyboard focus.
+type section uint8
+
+const (
+	sectionWallpapers section = iota
+	sectionMonitors
+)
 
 // flatEntry is one visible row in the wallpaper tree.
 type flatEntry struct {
@@ -20,8 +32,12 @@ type Model struct {
 	roots    []*domain.Node
 	expanded map[string]bool // set of expanded directory paths
 	flat     []flatEntry     // visible depth-first flattened tree
+	cursor   int
+	scroll   int // first visible index in the wallpaper list
 
-	cursor int
+	monitors      []domain.Monitor
+	monitorCursor int
+	focus         section
 
 	previews map[string]string // path → rendered preview string
 	loading  map[string]bool   // paths currently being rendered
@@ -34,10 +50,16 @@ type Model struct {
 }
 
 // New constructs a Model with injected infrastructure dependencies.
-func New(roots []*domain.Node, player domain.Player, previewer domain.Previewer) *Model {
+func New(
+	roots []*domain.Node,
+	monitors []domain.Monitor,
+	player domain.Player,
+	previewer domain.Previewer,
+) *Model {
 	m := &Model{
 		roots:     roots,
 		expanded:  make(map[string]bool),
+		monitors:  monitors,
 		previews:  make(map[string]string),
 		loading:   make(map[string]bool),
 		player:    player,
@@ -67,10 +89,24 @@ func (m *Model) currentWallpaper() *domain.Wallpaper {
 	return &w
 }
 
+// selectedMonitor returns the currently selected monitor.
+func (m *Model) selectedMonitor() domain.Monitor {
+	if m.monitorCursor < 0 || m.monitorCursor >= len(m.monitors) {
+		return domain.Monitor{ID: "ALL"}
+	}
+	return m.monitors[m.monitorCursor]
+}
+
+// availW returns the usable terminal width after applying horizontal margins.
+func (m *Model) availW() int { return m.width - marginH*2 }
+
+// availH returns the usable terminal height after applying vertical margins.
+func (m *Model) availH() int { return m.height - marginV*2 }
+
 // previewDims returns usable (cols, rows) for the image preview area.
 func (m *Model) previewDims() (cols, rows int) {
-	cols = m.width - listPanelW - 3
-	rows = m.height - 6
+	cols = m.availW() - listPanelW - 3
+	rows = m.availH() - 6
 	if cols < 20 {
 		cols = 60
 	}
@@ -80,13 +116,42 @@ func (m *Model) previewDims() (cols, rows int) {
 	return
 }
 
-// rebuildFlat recomputes the visible flat list from the tree and expanded state.
-// The cursor is clamped to stay within bounds after a rebuild.
+// wallpaperListH returns how many rows the wallpaper list can show.
+// It subtracts the monitor section and decorations from the panel height.
+func (m *Model) wallpaperListH() int {
+	innerH := m.availH() - 4
+	// header (title + blank) = 2
+	// separator = 1
+	// monitor section (title + blank + items) = 2 + len(monitors)
+	overhead := 2 + 1 + 2 + len(m.monitors)
+	h := innerH - overhead
+	if h < 1 {
+		h = 1
+	}
+	return h
+}
+
+// clampScroll adjusts m.scroll so the cursor stays within the visible window.
+func (m *Model) clampScroll() {
+	h := m.wallpaperListH()
+	if m.cursor < m.scroll {
+		m.scroll = m.cursor
+	}
+	if m.cursor >= m.scroll+h {
+		m.scroll = m.cursor - h + 1
+	}
+	if m.scroll < 0 {
+		m.scroll = 0
+	}
+}
+
+// rebuildFlat recomputes the visible flat list and keeps cursor/scroll valid.
 func (m *Model) rebuildFlat() {
 	m.flat = buildFlat(m.roots, m.expanded, 0)
 	if m.cursor >= len(m.flat) {
 		m.cursor = max(0, len(m.flat)-1)
 	}
+	m.clampScroll()
 }
 
 // buildFlat produces a depth-first flat list of visible nodes.
@@ -99,11 +164,4 @@ func buildFlat(nodes []*domain.Node, expanded map[string]bool, depth int) []flat
 		}
 	}
 	return out
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }

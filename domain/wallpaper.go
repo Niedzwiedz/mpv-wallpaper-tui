@@ -1,5 +1,7 @@
 package domain
 
+import "fmt"
+
 // Wallpaper is a video file that can be applied as a desktop wallpaper.
 // It is the value passed to Player and Previewer.
 type Wallpaper struct {
@@ -21,14 +23,33 @@ func (n *Node) Wallpaper() Wallpaper {
 	return Wallpaper{Name: n.Name, Path: n.Path}
 }
 
+// Monitor represents a display output.
+type Monitor struct {
+	ID         string // passed to mpvpaper, e.g. "ALL", "eDP-1", "DP-3"
+	Resolution string // display only, e.g. "3840×2160"; empty for ALL
+}
+
+// Label returns the display string shown in the monitor list.
+func (m Monitor) Label() string {
+	if m.Resolution == "" {
+		return m.ID
+	}
+	return fmt.Sprintf("%s  %s", m.ID, m.Resolution)
+}
+
 // Repository loads the wallpaper tree from a source.
 type Repository interface {
 	Tree() ([]*Node, error)
 }
 
-// Player applies a wallpaper to the desktop.
+// MonitorRepository detects available display outputs.
+type MonitorRepository interface {
+	List() []Monitor
+}
+
+// Player applies a wallpaper to a specific monitor.
 type Player interface {
-	Apply(Wallpaper) error
+	Apply(w Wallpaper, monitor Monitor) error
 }
 
 // Previewer renders a terminal image preview for a wallpaper.

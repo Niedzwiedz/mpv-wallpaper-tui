@@ -24,7 +24,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	model := ui.New(roots, infra.NewMpvPlayer(), infra.NewAutoPreviewer())
+	monitors := infra.NewMonitorDetector().List()
+
+	model := ui.New(roots, monitors, infra.NewMpvPlayer(), infra.NewAutoPreviewer())
 
 	if _, err := tea.NewProgram(model, tea.WithAltScreen()).Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

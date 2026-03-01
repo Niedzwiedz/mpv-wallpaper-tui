@@ -14,6 +14,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		m.previews = make(map[string]string)
 		m.loading = make(map[string]bool)
+		m.clampScroll()
 		return m, m.loadPreviewCmd(m.cursor)
 
 	case previewReady:
@@ -26,37 +27,75 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			return m, tea.Quit
 
-		case "down", "j":
-			if m.cursor < len(m.flat)-1 {
-				m.cursor++
-				return m, m.loadPreviewCmd(m.cursor)
+		case "tab":
+			if m.focus == sectionWallpapers {
+				m.focus = sectionMonitors
+			} else {
+				m.focus = sectionWallpapers
 			}
+
+		case "down", "j":
+			return m, m.moveDown()
 
 		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
+			return m, m.moveUp()
+
+		case "l", "right":
+			if m.focus == sectionWallpapers {
+				m.handleOpen()
 				return m, m.loadPreviewCmd(m.cursor)
 			}
 
-		case "l", "right":
-			m.handleOpen()
-			return m, m.loadPreviewCmd(m.cursor)
-
 		case "h", "left":
-			m.handleClose()
-			return m, m.loadPreviewCmd(m.cursor)
+			if m.focus == sectionWallpapers {
+				m.handleClose()
+				return m, m.loadPreviewCmd(m.cursor)
+			}
 
 		case "enter", " ":
-			if w := m.currentWallpaper(); w != nil {
-				return m, m.applyCmd(*w)
+			if m.focus == sectionWallpapers {
+				if w := m.currentWallpaper(); w != nil {
+					return m, m.applyCmd(*w)
+				}
 			}
 		}
 	}
 	return m, nil
 }
 
-// handleOpen expands a collapsed directory, or steps into its first child
-// if it is already expanded.
+func (m *Model) moveDown() tea.Cmd {
+	switch m.focus {
+	case sectionWallpapers:
+		if m.cursor < len(m.flat)-1 {
+			m.cursor++
+			m.clampScroll()
+			return m.loadPreviewCmd(m.cursor)
+		}
+	case sectionMonitors:
+		if m.monitorCursor < len(m.monitors)-1 {
+			m.monitorCursor++
+		}
+	}
+	return nil
+}
+
+func (m *Model) moveUp() tea.Cmd {
+	switch m.focus {
+	case sectionWallpapers:
+		if m.cursor > 0 {
+			m.cursor--
+			m.clampScroll()
+			return m.loadPreviewCmd(m.cursor)
+		}
+	case sectionMonitors:
+		if m.monitorCursor > 0 {
+			m.monitorCursor--
+		}
+	}
+	return nil
+}
+
+// handleOpen expands a collapsed directory, or steps into its first child.
 func (m *Model) handleOpen() {
 	e := m.current()
 	if e == nil || !e.node.IsDir {
@@ -67,11 +106,11 @@ func (m *Model) handleOpen() {
 		m.rebuildFlat()
 	} else if m.cursor+1 < len(m.flat) && m.flat[m.cursor+1].depth > e.depth {
 		m.cursor++
+		m.clampScroll()
 	}
 }
 
-// handleClose collapses an expanded directory, or moves the cursor up to the
-// parent directory (collapsing it) when on a collapsed dir or a file.
+// handleClose collapses an expanded directory, or moves to the parent.
 func (m *Model) handleClose() {
 	e := m.current()
 	if e == nil {
@@ -90,6 +129,7 @@ func (m *Model) handleClose() {
 					delete(m.expanded, m.flat[i].node.Path)
 					m.rebuildFlat()
 				}
+				m.clampScroll()
 				break
 			}
 		}
@@ -97,7 +137,7 @@ func (m *Model) handleClose() {
 }
 
 // loadPreviewCmd starts an async preview render for the entry at idx.
-// No-op for directory entries, already-cached previews, or in-flight renders.
+// No-op for directories, cached previews, or in-flight renders.
 func (m *Model) loadPreviewCmd(idx int) tea.Cmd {
 	if idx < 0 || idx >= len(m.flat) || m.width == 0 {
 		return nil
@@ -127,11 +167,12 @@ func (m *Model) loadPreviewCmd(idx int) tea.Cmd {
 	}
 }
 
-// applyCmd fires off the player in a background goroutine.
+// applyCmd applies the wallpaper to the selected monitor.
 func (m *Model) applyCmd(w domain.Wallpaper) tea.Cmd {
 	player := m.player
+	monitor := m.selectedMonitor()
 	return func() tea.Msg {
-		player.Apply(w) //nolint:errcheck
+		player.Apply(w, monitor) //nolint:errcheck
 		return nil
 	}
 }
