@@ -2,16 +2,7 @@
 
 A terminal UI for browsing and applying animated video wallpapers via [mpvpaper](https://github.com/GhostNaN/mpvpaper).
 
-```
-╭─ Wallpapers ──────────────╮ ╭─ Preview ──────────────────────────────────╮
-│ Wallpapers                │ │ berserk-blood-shadow  ↵ apply              │
-│                           │ │ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ │
-│ berserk-blood-shadow      │ │ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ │
-│ ████ crimson-butterfly ██ │ │ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ │
-│ silver-surfer-cosmic-void │ │                                             │
-╰───────────────────────────╯ ╰─────────────────────────────────────────────╯
-  ↑/k ↓/j  navigate    ↵/space  apply    q  quit
-```
+![screenshot](screenshot.png)
 
 ## Dependencies
 
