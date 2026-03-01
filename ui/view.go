@@ -1,7 +1,10 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
+
+	"mpv-wallpaper-tui/domain"
 
 	"github.com/charmbracelet/lipgloss"
 )
@@ -11,7 +14,7 @@ func (m *Model) View() string {
 		return "Loading…"
 	}
 	innerH := m.height - 4
-	help := helpStyle.Render("  ↑/k ↓/j  navigate    ↵/space  apply    q  quit")
+	help := helpStyle.Render("  ↑/k ↓/j  navigate    l/→ open    h/← close    ↵/space  apply    q  quit")
 	panels := lipgloss.JoinHorizontal(lipgloss.Top,
 		m.listPanel(innerH),
 		m.previewPanel(innerH),
@@ -26,8 +29,10 @@ func (m *Model) listPanel(innerH int) string {
 		titleStyle.Width(contentW).Render("Wallpapers"),
 		"",
 	}
-	for i, w := range m.wallpapers {
-		label := truncate(w.Name, contentW-3)
+
+	for i, e := range m.flat {
+		label := m.entryLabel(e)
+		label = truncate(label, contentW-3)
 		if i == m.cursor {
 			lines = append(lines, selectedStyle.Width(contentW).Render(label))
 		} else {
@@ -36,9 +41,23 @@ func (m *Model) listPanel(innerH int) string {
 	}
 
 	return panelStyle.
-		Width(listPanelW - 2). // lipgloss Width = content; border adds 2
+		Width(listPanelW - 2).
 		Height(innerH).
 		Render(strings.Join(lines, "\n"))
+}
+
+// entryLabel builds the display string for a flat entry, including
+// depth indentation and a directory expand/collapse indicator.
+func (m *Model) entryLabel(e flatEntry) string {
+	indent := strings.Repeat("  ", e.depth)
+	if e.node.IsDir {
+		indicator := "▸ "
+		if m.expanded[e.node.Path] {
+			indicator = "▾ "
+		}
+		return indent + indicator + e.node.Name
+	}
+	return indent + "  " + e.node.Name
 }
 
 func (m *Model) previewPanel(innerH int) string {
@@ -53,15 +72,39 @@ func (m *Model) previewPanel(innerH int) string {
 }
 
 func (m *Model) previewContent() string {
-	w := m.current()
-	if w == nil {
+	e := m.current()
+	if e == nil {
 		return "\n  " + dimStyle.Render("No wallpapers found")
 	}
+	if e.node.IsDir {
+		n := countDescendants(e.node)
+		return "\n  " + dimStyle.Render(fmt.Sprintf("folder: %s  (%d video%s)", e.node.Name, n, plural(n)))
+	}
+	w := e.node.Wallpaper()
 	if rendered, ok := m.previews[w.Path]; ok {
 		header := titleStyle.Render(w.Name) + "  " + dimStyle.Render("↵ apply")
 		return header + "\n" + rendered
 	}
 	return "\n  " + dimStyle.Render("Loading preview…")
+}
+
+// countDescendants returns the total number of video file descendants of n.
+func countDescendants(n *domain.Node) int {
+	if !n.IsDir {
+		return 1
+	}
+	total := 0
+	for _, c := range n.Children {
+		total += countDescendants(c)
+	}
+	return total
+}
+
+func plural(n int) string {
+	if n == 1 {
+		return ""
+	}
+	return "s"
 }
 
 // truncate shortens s to max runes, appending "…" if needed.

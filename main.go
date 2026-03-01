@@ -18,14 +18,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	repo := infra.NewFSRepository(cfg.WallpapersPath)
-	wallpapers, err := repo.List()
+	roots, err := infra.NewFSRepository(cfg.WallpapersPath).Tree()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "could not read wallpapers: %v\n", err)
 		os.Exit(1)
 	}
 
-	model := ui.New(wallpapers, infra.NewMpvPlayer(), infra.NewAutoPreviewer())
+	model := ui.New(roots, infra.NewMpvPlayer(), infra.NewAutoPreviewer())
 
 	if _, err := tea.NewProgram(model, tea.WithAltScreen()).Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
