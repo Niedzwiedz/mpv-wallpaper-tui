@@ -94,8 +94,21 @@ mpv-wallpaper-tui
 |-----|--------|
 | `↑` / `k` | Move up |
 | `↓` / `j` | Move down |
+| `→` / `l` | Open folder |
+| `←` / `h` | Close folder / go to parent |
 | `↵` / `space` | Apply selected wallpaper |
+| `m` | Open monitor selector |
+| `a` | Toggle preview animation on/off |
 | `q` / `Ctrl+C` | Quit |
+
+**Monitor selector** (`m`):
+
+| Key | Action |
+|-----|--------|
+| `↑` / `k` | Move up |
+| `↓` / `j` | Move down |
+| `↵` / `space` | Confirm selection |
+| `esc` / `m` / `q` | Cancel |
 
 Applying a wallpaper kills any running `mpvpaper` instance and starts a new one.
 The wallpaper keeps playing after you quit the TUI.
