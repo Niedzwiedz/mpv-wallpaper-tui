@@ -65,24 +65,24 @@ func (m *Model) helpBar() string {
 
 func (m *Model) listPanel(innerH int) string {
 	contentW := listPanelW - 4 // border (2) + manual padding (2)
-	listH := m.wallpaperListH()
+	listH := m.list.wallpaperListH(m.availH())
 
 	lines := []string{
 		titleStyle.Width(contentW).Render("Wallpapers"),
 		"",
 	}
 
-	end := min(m.scroll+listH, len(m.flat))
-	for i := m.scroll; i < end; i++ {
-		label := truncate(m.entryLabel(m.flat[i]), contentW-3)
-		if i == m.cursor {
+	end := min(m.list.scroll+listH, len(m.list.flat))
+	for i := m.list.scroll; i < end; i++ {
+		label := truncate(m.list.entryLabel(m.list.flat[i]), contentW-3)
+		if i == m.list.cursor {
 			lines = append(lines, selectedStyle.Width(contentW).Render(label))
 		} else {
 			lines = append(lines, itemStyle.Width(contentW).Render(label))
 		}
 	}
 	// Pad remaining rows so the panel height stays stable.
-	for i := end - m.scroll; i < listH; i++ {
+	for i := end - m.list.scroll; i < listH; i++ {
 		lines = append(lines, "")
 	}
 
@@ -90,18 +90,6 @@ func (m *Model) listPanel(innerH int) string {
 		Width(listPanelW - 2).
 		Height(innerH).
 		Render(strings.Join(lines, "\n"))
-}
-
-func (m *Model) entryLabel(e flatEntry) string {
-	indent := strings.Repeat("  ", e.depth)
-	if e.node.IsDir {
-		indicator := "▸ "
-		if m.expanded[e.node.Path] {
-			indicator = "▾ "
-		}
-		return indent + indicator + e.node.Name
-	}
-	return indent + "  " + e.node.Name
 }
 
 // ── Preview panel ─────────────────────────────────────────────────────────────
@@ -118,7 +106,7 @@ func (m *Model) previewPanel(innerH int) string {
 }
 
 func (m *Model) previewContent() string {
-	e := m.current()
+	e := m.list.current()
 	if e == nil {
 		return "\n  " + dimStyle.Render("No wallpapers found")
 	}
@@ -146,17 +134,17 @@ func (m *Model) previewContent() string {
 // ── Grid view ─────────────────────────────────────────────────────────────────
 
 func (m *Model) gridView() string {
-	numCols := m.gridCols()
-	cellCols, cellRows := m.cellDims()
+	numCols := m.grid.cols(m.availW())
+	cellCols, cellRows := m.grid.cellDims(m.availW())
 
 	var rows []string
-	lastRow := m.gridScroll + m.visibleGridRows()
-	for row := m.gridScroll; row < lastRow; row++ {
+	lastRow := m.grid.scroll + m.grid.visibleRows(m.availW(), m.availH())
+	for row := m.grid.scroll; row < lastRow; row++ {
 		first := row * numCols
-		if first >= len(m.gridWallpapers) {
+		if first >= len(m.grid.wallpapers) {
 			break
 		}
-		last := min(first+numCols, len(m.gridWallpapers))
+		last := min(first+numCols, len(m.grid.wallpapers))
 		var cells []string
 		for i := first; i < last; i++ {
 			cells = append(cells, m.renderCell(i, cellCols, cellRows))
@@ -171,8 +159,8 @@ func (m *Model) gridView() string {
 }
 
 func (m *Model) renderCell(idx, cellCols, cellRows int) string {
-	w := m.gridWallpapers[idx]
-	isFocused := idx == m.gridCursor
+	w := m.grid.wallpapers[idx]
+	isFocused := idx == m.grid.cursor
 
 	var preview string
 	if frames, ok := m.frames[w.Path]; ok {
@@ -199,7 +187,7 @@ func (m *Model) renderCell(idx, cellCols, cellRows int) string {
 
 	return lipgloss.NewStyle().
 		Width(cellCols).
-		Height(cellRows+1).
+		Height(cellRows + 1).
 		MarginRight(1).
 		Render(name + "\n" + preview)
 }

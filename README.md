@@ -4,6 +4,20 @@ A terminal UI for browsing and applying animated video wallpapers via [mpvpaper]
 
 ![screenshot](showcase/screenshot.png)
 
+## Views
+
+### List view
+
+Browse wallpapers in a folder tree with an animated preview panel on the right.
+
+![list animation](showcase/animation.gif)
+
+### Grid view
+
+Press `v` to switch to a thumbnail grid. Navigate with `hjkl`, press `v` again to return.
+
+![grid view](showcase/grid.gif)
+
 ## Dependencies
 
 ### Runtime
@@ -80,15 +94,13 @@ make uninstall-service
 install -Dm644 mpv-wallpaper.desktop ~/.config/autostart/mpv-wallpaper.desktop
 ```
 
-## Preview animation
-
-![demo](showcase/animation.gif)
-
 ## Usage
 
 ```bash
 mpv-wallpaper-tui
 ```
+
+### List view
 
 | Key | Action |
 |-----|--------|
@@ -97,11 +109,25 @@ mpv-wallpaper-tui
 | `→` / `l` | Open folder |
 | `←` / `h` | Close folder / go to parent |
 | `↵` / `space` | Apply selected wallpaper |
+| `v` | Switch to grid view |
 | `m` | Open monitor selector |
 | `a` | Toggle preview animation on/off |
 | `q` / `Ctrl+C` | Quit |
 
-**Monitor selector** (`m`):
+### Grid view
+
+| Key | Action |
+|-----|--------|
+| `h` / `j` / `k` / `l` | Navigate left / down / up / right |
+| `gg` | Jump to first wallpaper |
+| `G` | Jump to last wallpaper |
+| `↵` / `space` | Apply selected wallpaper |
+| `v` | Switch back to list view |
+| `m` | Open monitor selector |
+| `a` | Toggle preview animation on/off |
+| `q` / `Ctrl+C` | Quit |
+
+### Monitor selector (`m`)
 
 | Key | Action |
 |-----|--------|
