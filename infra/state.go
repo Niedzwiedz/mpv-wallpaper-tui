@@ -8,9 +8,22 @@ import (
 	"strings"
 )
 
-// pidFilePath returns the path to the PID state file.
+// persistedState holds everything that must survive across TUI restarts.
+type persistedState struct {
+	PIDs       map[string]int    `json:"pids"`
+	Wallpapers map[string]string `json:"wallpapers"`
+}
+
+func emptyState() persistedState {
+	return persistedState{
+		PIDs:       make(map[string]int),
+		Wallpapers: make(map[string]string),
+	}
+}
+
+// stateFilePath returns the path to the unified state file.
 // Uses $XDG_STATE_HOME or falls back to ~/.local/state.
-func pidFilePath() (string, error) {
+func stateFilePath() (string, error) {
 	base := os.Getenv("XDG_STATE_HOME")
 	if base == "" {
 		home, err := os.UserHomeDir()
@@ -19,37 +32,43 @@ func pidFilePath() (string, error) {
 		}
 		base = filepath.Join(home, ".local", "state")
 	}
-	return filepath.Join(base, "mpv-wallpaper-tui", "pids.json"), nil
+	return filepath.Join(base, "mpv-wallpaper-tui", "state.json"), nil
 }
 
-// readPIDs loads the monitor→pid map from disk.
-// Returns an empty map on any error (missing file, bad JSON, etc.).
-func readPIDs() map[string]int {
-	path, err := pidFilePath()
+// readState loads the persisted state from disk.
+// Returns an empty state on any error (missing file, bad JSON, etc.).
+func readState() persistedState {
+	path, err := stateFilePath()
 	if err != nil {
-		return make(map[string]int)
+		return emptyState()
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return make(map[string]int)
+		return emptyState()
 	}
-	var pids map[string]int
-	if err := json.Unmarshal(data, &pids); err != nil {
-		return make(map[string]int)
+	var s persistedState
+	if err := json.Unmarshal(data, &s); err != nil {
+		return emptyState()
 	}
-	return pids
+	if s.PIDs == nil {
+		s.PIDs = make(map[string]int)
+	}
+	if s.Wallpapers == nil {
+		s.Wallpapers = make(map[string]string)
+	}
+	return s
 }
 
-// writePIDs persists the monitor→pid map to disk.
-func writePIDs(pids map[string]int) error {
-	path, err := pidFilePath()
+// writeState persists the state to disk.
+func writeState(s persistedState) error {
+	path, err := stateFilePath()
 	if err != nil {
 		return err
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
-	data, err := json.MarshalIndent(pids, "", "  ")
+	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return err
 	}

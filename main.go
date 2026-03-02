@@ -12,6 +12,11 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "--restore" {
+		infra.NewMpvPlayer().Restore()
+		return
+	}
+
 	cfg, err := config.Load()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "config: %v\n", err)

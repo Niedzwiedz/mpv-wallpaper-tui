@@ -46,6 +46,40 @@ make build      # build only, outputs ./mpv-wallpaper-tui
 make uninstall  # remove from ~/.local/bin
 ```
 
+### Autostart on login
+
+To restore your last wallpaper automatically on login:
+
+```bash
+make install-autostart
+```
+
+This detects the best method for your system:
+
+| Condition | Method used |
+|-----------|-------------|
+| systemd user session running (`/run/user/UID/systemd` exists) | systemd user service (`~/.config/systemd/user/mpv-wallpaper.service`) |
+| No systemd user session | XDG autostart entry (`~/.config/autostart/mpv-wallpaper.desktop`) |
+
+Both methods run `mpv-wallpaper-tui --restore` once at session start to reapply the last selected wallpaper.
+
+To remove:
+
+```bash
+make uninstall-autostart
+```
+
+You can also install each method explicitly:
+
+```bash
+make install-service    # systemd only
+make uninstall-service
+
+# XDG autostart works on any DE that implements the XDG autostart spec
+# (GNOME, KDE, XFCE, and Wayland compositors paired with dex or similar)
+install -Dm644 mpv-wallpaper.desktop ~/.config/autostart/mpv-wallpaper.desktop
+```
+
 ## Usage
 
 ```bash
