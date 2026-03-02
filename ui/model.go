@@ -36,8 +36,9 @@ type Model struct {
 	previews map[string]string
 	frames   map[string][]string
 	loading  map[string]bool
-	frameIdx int
-	tickGen  int
+	frameIdx  int
+	tickGen   int
+	animating bool
 
 	width  int
 	height int
@@ -69,6 +70,7 @@ func New(
 		player:        player,
 		previewer:     previewer,
 		modalContentW: modalW,
+		animating:     true,
 	}
 	m.flat = buildFlat(roots, m.expanded, 0)
 	return m

@@ -34,8 +34,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case animTick:
-		if msg.gen != m.tickGen {
-			return m, nil // stale tick from a previous chain
+		if msg.gen != m.tickGen || !m.animating {
+			return m, nil // stale tick or animation disabled
 		}
 		if w := m.currentWallpaper(); w != nil {
 			if frames, ok := m.frames[w.Path]; ok && len(frames) > 1 {
@@ -88,6 +88,12 @@ func (m *Model) handleKey(key string) tea.Cmd {
 	case "m":
 		m.savedMonitorCursor = m.monitorCursor
 		m.modalOpen = true
+
+	case "a":
+		m.animating = !m.animating
+		if m.animating {
+			return m.startTick()
+		}
 
 	case "enter", " ":
 		if w := m.currentWallpaper(); w != nil {
@@ -179,17 +185,22 @@ func (m *Model) loadPreviewCmd(idx int) tea.Cmd {
 	previewer := m.previewer
 
 	if ap, ok := previewer.(domain.AnimatedPreviewer); ok {
-		return func() tea.Msg {
+		// Two concurrent cmds: quick static first frame + slow full animation.
+		staticCmd := func() tea.Msg {
+			content, err := previewer.Render(w, cols, rows)
+			if err != nil {
+				return nil
+			}
+			return previewReady{path: w.Path, content: content}
+		}
+		framesCmd := func() tea.Msg {
 			frames, err := ap.RenderFrames(w, cols, rows)
 			if err != nil || len(frames) == 0 {
-				content, err2 := previewer.Render(w, cols, rows)
-				if err2 != nil {
-					content = dimStyle.Render("  preview unavailable: " + err2.Error())
-				}
-				return previewReady{path: w.Path, content: content}
+				return nil
 			}
 			return framesReady{path: w.Path, frames: frames}
 		}
+		return tea.Batch(staticCmd, framesCmd)
 	}
 
 	return func() tea.Msg {
@@ -202,8 +213,11 @@ func (m *Model) loadPreviewCmd(idx int) tea.Cmd {
 }
 
 // startTick begins a new animation tick chain for the current wallpaper.
-// Returns nil when the current entry has no (or only one) frame.
+// Returns nil when animation is disabled or the current entry has ≤1 frame.
 func (m *Model) startTick() tea.Cmd {
+	if !m.animating {
+		return nil
+	}
 	w := m.currentWallpaper()
 	if w == nil {
 		return nil
