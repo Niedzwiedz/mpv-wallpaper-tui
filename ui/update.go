@@ -14,9 +14,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		m.previews = make(map[string]string)
-		m.frames = make(map[string][]string)
-		m.loading = make(map[string]bool)
+		m.clearCaches()
+		if m.gridMode {
+			m.clampGridScroll()
+			return m, m.loadGridVisibleCmd()
+		}
 		m.clampScroll()
 		return m, m.loadPreviewCmd(m.cursor)
 
@@ -48,6 +50,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		if m.modalOpen {
 			return m, m.handleModalKey(msg.String())
+		}
+		if m.gridMode {
+			return m, m.handleGridKey(msg.String())
 		}
 		return m, m.handleKey(msg.String())
 	}
@@ -84,6 +89,81 @@ func (m *Model) handleKey(key string) tea.Cmd {
 		m.handleClose()
 		m.frameIdx = 0
 		return tea.Batch(m.loadPreviewCmd(m.cursor), m.startTick())
+
+	case "m":
+		m.savedMonitorCursor = m.monitorCursor
+		m.modalOpen = true
+
+	case "a":
+		m.animating = !m.animating
+		if m.animating {
+			return m.startTick()
+		}
+
+	case "v":
+		m.gridMode = true
+		m.clearCaches()
+		if m.gridWallpapers == nil {
+			m.gridWallpapers = collectWallpapers(m.roots)
+		}
+		m.gridCursor = 0
+		m.gridScroll = 0
+		m.frameIdx = 0
+		return tea.Batch(m.loadGridVisibleCmd(), m.startTick())
+
+	case "enter", " ":
+		if w := m.currentWallpaper(); w != nil {
+			return m.applyCmd(*w)
+		}
+	}
+	return nil
+}
+
+func (m *Model) handleGridKey(key string) tea.Cmd {
+	n := len(m.gridWallpapers)
+	cols := m.gridCols()
+
+	switch key {
+	case "ctrl+c", "q":
+		return tea.Quit
+
+	case "v", "esc":
+		m.gridMode = false
+		m.clearCaches()
+		m.frameIdx = 0
+		return tea.Batch(m.loadPreviewCmd(m.cursor), m.startTick())
+
+	case "right", "l":
+		if m.gridCursor < n-1 && (m.gridCursor+1)%cols != 0 {
+			m.gridCursor++
+			m.frameIdx = 0
+			m.clampGridScroll()
+			return tea.Batch(m.loadGridVisibleCmd(), m.startTick())
+		}
+
+	case "left", "h":
+		if m.gridCursor > 0 && m.gridCursor%cols != 0 {
+			m.gridCursor--
+			m.frameIdx = 0
+			m.clampGridScroll()
+			return tea.Batch(m.loadGridVisibleCmd(), m.startTick())
+		}
+
+	case "down", "j":
+		if m.gridCursor+cols < n {
+			m.gridCursor += cols
+			m.frameIdx = 0
+			m.clampGridScroll()
+			return tea.Batch(m.loadGridVisibleCmd(), m.startTick())
+		}
+
+	case "up", "k":
+		if m.gridCursor >= cols {
+			m.gridCursor -= cols
+			m.frameIdx = 0
+			m.clampGridScroll()
+			return tea.Batch(m.loadGridVisibleCmd(), m.startTick())
+		}
 
 	case "m":
 		m.savedMonitorCursor = m.monitorCursor
@@ -161,6 +241,12 @@ func (m *Model) handleClose() {
 	}
 }
 
+func (m *Model) clearCaches() {
+	m.previews = make(map[string]string)
+	m.frames = make(map[string][]string)
+	m.loading = make(map[string]bool)
+}
+
 func (m *Model) loadPreviewCmd(idx int) tea.Cmd {
 	if idx < 0 || idx >= len(m.flat) || m.width == 0 {
 		return nil
@@ -169,7 +255,14 @@ func (m *Model) loadPreviewCmd(idx int) tea.Cmd {
 	if e.node.IsDir {
 		return nil
 	}
-	w := e.node.Wallpaper()
+	cols, rows := m.previewDims()
+	return m.loadWallpaperCmd(e.node.Wallpaper(), true, cols, rows)
+}
+
+// loadWallpaperCmd returns a command that renders w at the given dimensions.
+// When animated is true and the previewer supports animation, two concurrent
+// commands are returned: a fast static render and a slower full-frame render.
+func (m *Model) loadWallpaperCmd(w domain.Wallpaper, animated bool, cols, rows int) tea.Cmd {
 	if _, cached := m.previews[w.Path]; cached {
 		return nil
 	}
@@ -180,27 +273,26 @@ func (m *Model) loadPreviewCmd(idx int) tea.Cmd {
 		return nil
 	}
 	m.loading[w.Path] = true
-
-	cols, rows := m.previewDims()
 	previewer := m.previewer
 
-	if ap, ok := previewer.(domain.AnimatedPreviewer); ok {
-		// Two concurrent cmds: quick static first frame + slow full animation.
-		staticCmd := func() tea.Msg {
-			content, err := previewer.Render(w, cols, rows)
-			if err != nil {
-				return nil
+	if animated {
+		if ap, ok := previewer.(domain.AnimatedPreviewer); ok {
+			staticCmd := func() tea.Msg {
+				content, err := previewer.Render(w, cols, rows)
+				if err != nil {
+					return nil
+				}
+				return previewReady{path: w.Path, content: content}
 			}
-			return previewReady{path: w.Path, content: content}
-		}
-		framesCmd := func() tea.Msg {
-			frames, err := ap.RenderFrames(w, cols, rows)
-			if err != nil || len(frames) == 0 {
-				return nil
+			framesCmd := func() tea.Msg {
+				frames, err := ap.RenderFrames(w, cols, rows)
+				if err != nil || len(frames) == 0 {
+					return nil
+				}
+				return framesReady{path: w.Path, frames: frames}
 			}
-			return framesReady{path: w.Path, frames: frames}
+			return tea.Batch(staticCmd, framesCmd)
 		}
-		return tea.Batch(staticCmd, framesCmd)
 	}
 
 	return func() tea.Msg {
@@ -210,6 +302,30 @@ func (m *Model) loadPreviewCmd(idx int) tea.Cmd {
 		}
 		return previewReady{path: w.Path, content: content}
 	}
+}
+
+// loadGridVisibleCmd loads previews for all currently visible grid cells.
+// The focused cell gets animated loading; others get static only.
+func (m *Model) loadGridVisibleCmd() tea.Cmd {
+	if m.width == 0 {
+		return nil
+	}
+	numCols := m.gridCols()
+	cellCols, cellRows := m.cellDims()
+	first := m.gridScroll * numCols
+	last := min((m.gridScroll+m.visibleGridRows())*numCols, len(m.gridWallpapers))
+
+	cmds := make([]tea.Cmd, 0, last-first)
+	for i := first; i < last; i++ {
+		cmd := m.loadWallpaperCmd(m.gridWallpapers[i], i == m.gridCursor, cellCols, cellRows)
+		if cmd != nil {
+			cmds = append(cmds, cmd)
+		}
+	}
+	if len(cmds) == 0 {
+		return nil
+	}
+	return tea.Batch(cmds...)
 }
 
 // startTick begins a new animation tick chain for the current wallpaper.

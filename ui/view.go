@@ -20,6 +20,9 @@ func (m *Model) View() string {
 			m.monitorModal(),
 		)
 	}
+	if m.gridMode {
+		return m.gridView()
+	}
 	return m.mainView()
 }
 
@@ -40,10 +43,20 @@ func (m *Model) helpBar() string {
 	if !m.animating {
 		anim = "off"
 	}
+	if m.gridMode {
+		return helpStyle.Render(
+			"  h/j/k/l  navigate    ↵/space  apply" +
+				"    m: monitor(" + mon.Label() + ")" +
+				"    a: anim(" + anim + ")" +
+				"    v/esc: list" +
+				"    q  quit",
+		)
+	}
 	return helpStyle.Render(
 		"  ↑/k ↓/j  navigate    l/→ open    h/← close    ↵/space  apply" +
 			"    m: monitor(" + mon.Label() + ")" +
 			"    a: anim(" + anim + ")" +
+			"    v: grid" +
 			"    q  quit",
 	)
 }
@@ -128,6 +141,67 @@ func (m *Model) previewContent() string {
 		return header + "\n" + rendered
 	}
 	return "\n  " + dimStyle.Render("Loading preview…")
+}
+
+// ── Grid view ─────────────────────────────────────────────────────────────────
+
+func (m *Model) gridView() string {
+	numCols := m.gridCols()
+	cellCols, cellRows := m.cellDims()
+
+	var rows []string
+	lastRow := m.gridScroll + m.visibleGridRows()
+	for row := m.gridScroll; row < lastRow; row++ {
+		first := row * numCols
+		if first >= len(m.gridWallpapers) {
+			break
+		}
+		last := min(first+numCols, len(m.gridWallpapers))
+		var cells []string
+		for i := first; i < last; i++ {
+			cells = append(cells, m.renderCell(i, cellCols, cellRows))
+		}
+		rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Top, cells...))
+	}
+
+	grid := strings.Join(rows, "\n")
+	return lipgloss.NewStyle().
+		Margin(marginV, marginH).
+		Render(grid + "\n" + m.helpBar())
+}
+
+func (m *Model) renderCell(idx, cellCols, cellRows int) string {
+	w := m.gridWallpapers[idx]
+	isFocused := idx == m.gridCursor
+
+	var preview string
+	if frames, ok := m.frames[w.Path]; ok {
+		if isFocused && m.animating && len(frames) > 1 {
+			preview = frames[m.frameIdx%len(frames)]
+		} else {
+			preview = frames[0]
+		}
+	} else if rendered, ok := m.previews[w.Path]; ok {
+		preview = rendered
+	} else {
+		preview = dimStyle.Render("loading…")
+	}
+
+	nameFg := muted
+	if isFocused {
+		nameFg = accent
+	}
+	name := lipgloss.NewStyle().
+		Foreground(nameFg).
+		Bold(isFocused).
+		Width(cellCols).
+		Render(truncate(w.Name, cellCols))
+
+	return lipgloss.NewStyle().
+		Width(cellCols).
+		Height(cellRows+1).
+		MarginRight(1).
+		Render(name + "\n" + preview)
 }
 
 // ── Monitor modal ─────────────────────────────────────────────────────────────

@@ -40,6 +40,11 @@ type Model struct {
 	tickGen   int
 	animating bool
 
+	gridMode       bool
+	gridCursor     int
+	gridScroll     int
+	gridWallpapers []domain.Wallpaper
+
 	width  int
 	height int
 
@@ -86,6 +91,13 @@ func (m *Model) current() *flatEntry {
 }
 
 func (m *Model) currentWallpaper() *domain.Wallpaper {
+	if m.gridMode {
+		if m.gridCursor >= len(m.gridWallpapers) {
+			return nil
+		}
+		w := m.gridWallpapers[m.gridCursor]
+		return &w
+	}
 	e := m.current()
 	if e == nil || e.node.IsDir {
 		return nil
@@ -144,6 +156,75 @@ func (m *Model) rebuildFlat() {
 		m.cursor = max(0, len(m.flat)-1)
 	}
 	m.clampScroll()
+}
+
+// ── Grid layout helpers ───────────────────────────────────────────────────────
+
+func (m *Model) gridCols() int {
+	switch {
+	case m.availW() >= 120:
+		return 4
+	case m.availW() >= 90:
+		return 3
+	case m.availW() >= 60:
+		return 2
+	default:
+		return 1
+	}
+}
+
+// cellDims returns the inner (content) dimensions of each grid cell.
+// cols is the character width; rows is the preview height (excludes the name line).
+// The /5 ratio keeps cells compact so multiple rows fit on screen at once.
+func (m *Model) cellDims() (cols, rows int) {
+	numCols := m.gridCols()
+	cols = m.availW()/numCols - 1 // subtract 1-char right margin gap between cells
+	if cols < 10 {
+		cols = 10
+	}
+	rows = cols / 5
+	if rows < 3 {
+		rows = 3
+	}
+	return
+}
+
+// visibleGridRows returns how many full rows of cells fit on screen.
+func (m *Model) visibleGridRows() int {
+	_, cellRows := m.cellDims()
+	cellH := cellRows + 1 + 2 // preview + name line + border
+	v := (m.availH() - 1) / cellH
+	if v < 1 {
+		return 1
+	}
+	return v
+}
+
+func (m *Model) clampGridScroll() {
+	numCols := m.gridCols()
+	curRow := m.gridCursor / numCols
+	visRows := m.visibleGridRows()
+	if curRow < m.gridScroll {
+		m.gridScroll = curRow
+	}
+	if curRow >= m.gridScroll+visRows {
+		m.gridScroll = curRow - visRows + 1
+	}
+	if m.gridScroll < 0 {
+		m.gridScroll = 0
+	}
+}
+
+func collectWallpapers(nodes []*domain.Node) []domain.Wallpaper {
+	var out []domain.Wallpaper
+	for _, n := range nodes {
+		if n.IsDir {
+			out = append(out, collectWallpapers(n.Children)...)
+		} else {
+			out = append(out, n.Wallpaper())
+		}
+	}
+	return out
 }
 
 func buildFlat(nodes []*domain.Node, expanded map[string]bool, depth int) []flatEntry {
