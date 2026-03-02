@@ -44,6 +44,7 @@ type Model struct {
 	gridCursor     int
 	gridScroll     int
 	gridWallpapers []domain.Wallpaper
+	gridPendingG   bool
 
 	width  int
 	height int

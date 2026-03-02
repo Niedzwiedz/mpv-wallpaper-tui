@@ -123,6 +123,9 @@ func (m *Model) handleGridKey(key string) tea.Cmd {
 	n := len(m.gridWallpapers)
 	cols := m.gridCols()
 
+	pendingG := m.gridPendingG
+	m.gridPendingG = false
+
 	switch key {
 	case "ctrl+c", "q":
 		return tea.Quit
@@ -160,6 +163,25 @@ func (m *Model) handleGridKey(key string) tea.Cmd {
 	case "up", "k":
 		if m.gridCursor >= cols {
 			m.gridCursor -= cols
+			m.frameIdx = 0
+			m.clampGridScroll()
+			return tea.Batch(m.loadGridVisibleCmd(), m.startTick())
+		}
+
+	case "g":
+		if pendingG {
+			// gg — go to first
+			m.gridCursor = 0
+			m.frameIdx = 0
+			m.clampGridScroll()
+			return tea.Batch(m.loadGridVisibleCmd(), m.startTick())
+		}
+		m.gridPendingG = true
+
+	case "G":
+		// G — go to last
+		if n > 0 {
+			m.gridCursor = n - 1
 			m.frameIdx = 0
 			m.clampGridScroll()
 			return tea.Batch(m.loadGridVisibleCmd(), m.startTick())
