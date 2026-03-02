@@ -36,9 +36,14 @@ func (m *Model) mainView() string {
 
 func (m *Model) helpBar() string {
 	mon := m.selectedMonitor()
+	anim := "on"
+	if !m.animating {
+		anim = "off"
+	}
 	return helpStyle.Render(
 		"  ↑/k ↓/j  navigate    l/→ open    h/← close    ↵/space  apply" +
 			"    m: monitor(" + mon.Label() + ")" +
+			"    a: anim(" + anim + ")" +
 			"    q  quit",
 	)
 }
@@ -109,10 +114,17 @@ func (m *Model) previewContent() string {
 		return "\n  " + dimStyle.Render(fmt.Sprintf("folder: %s  (%d video%s)", e.node.Name, n, plural(n)))
 	}
 	w := e.node.Wallpaper()
+	mon := m.selectedMonitor()
+	header := titleStyle.Render(w.Name) +
+		"  " + dimStyle.Render("↵ apply → "+mon.Label())
+
+	if frames, ok := m.frames[w.Path]; ok {
+		if m.animating && len(frames) > 1 {
+			return header + "\n" + frames[m.frameIdx%len(frames)]
+		}
+		return header + "\n" + frames[0]
+	}
 	if rendered, ok := m.previews[w.Path]; ok {
-		mon := m.selectedMonitor()
-		header := titleStyle.Render(w.Name) +
-			"  " + dimStyle.Render("↵ apply → "+mon.Label())
 		return header + "\n" + rendered
 	}
 	return "\n  " + dimStyle.Render("Loading preview…")

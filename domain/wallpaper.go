@@ -57,3 +57,9 @@ type Player interface {
 type Previewer interface {
 	Render(w Wallpaper, cols, rows int) (string, error)
 }
+
+// AnimatedPreviewer extends Previewer with multi-frame rendering for animation.
+type AnimatedPreviewer interface {
+	Previewer
+	RenderFrames(w Wallpaper, cols, rows int) ([]string, error)
+}
