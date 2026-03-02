@@ -109,10 +109,14 @@ func (m *Model) previewContent() string {
 		return "\n  " + dimStyle.Render(fmt.Sprintf("folder: %s  (%d video%s)", e.node.Name, n, plural(n)))
 	}
 	w := e.node.Wallpaper()
+	mon := m.selectedMonitor()
+	header := titleStyle.Render(w.Name) +
+		"  " + dimStyle.Render("↵ apply → "+mon.Label())
+
+	if frames, ok := m.frames[w.Path]; ok {
+		return header + "\n" + frames[m.frameIdx%len(frames)]
+	}
 	if rendered, ok := m.previews[w.Path]; ok {
-		mon := m.selectedMonitor()
-		header := titleStyle.Render(w.Name) +
-			"  " + dimStyle.Render("↵ apply → "+mon.Label())
 		return header + "\n" + rendered
 	}
 	return "\n  " + dimStyle.Render("Loading preview…")

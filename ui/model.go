@@ -34,7 +34,10 @@ type Model struct {
 	modalContentW      int // pre-computed modal width
 
 	previews map[string]string
+	frames   map[string][]string
 	loading  map[string]bool
+	frameIdx int
+	tickGen  int
 
 	width  int
 	height int
@@ -61,6 +64,7 @@ func New(
 		expanded:      make(map[string]bool),
 		monitors:      monitors,
 		previews:      make(map[string]string),
+		frames:        make(map[string][]string),
 		loading:       make(map[string]bool),
 		player:        player,
 		previewer:     previewer,

@@ -34,6 +34,32 @@ func (p *ChafaPreviewer) Render(w domain.Wallpaper, cols, rows int) (string, err
 	return strings.TrimRight(string(out), "\n"), nil
 }
 
+func (p *ChafaPreviewer) RenderFrames(w domain.Wallpaper, cols, rows int) ([]string, error) {
+	paths, err := extractFramesToFiles(w.Path, 20)
+	if err != nil {
+		return nil, err
+	}
+	size := strconv.Itoa(cols) + "x" + strconv.Itoa(rows)
+	frames := make([]string, 0, len(paths))
+	for _, fp := range paths {
+		out, err := exec.Command(
+			"chafa",
+			"--format", "symbols",
+			"--size", size,
+			"--stretch",
+			fp,
+		).Output()
+		if err != nil {
+			continue
+		}
+		frames = append(frames, strings.TrimRight(string(out), "\n"))
+	}
+	if len(frames) == 0 {
+		return nil, fmt.Errorf("no frames rendered")
+	}
+	return frames, nil
+}
+
 // NewAutoPreviewer returns a ChafaPreviewer when chafa is on PATH,
 // falling back to HalfBlockPreviewer otherwise.
 func NewAutoPreviewer() domain.Previewer {
