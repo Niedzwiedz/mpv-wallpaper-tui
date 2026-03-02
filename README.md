@@ -2,7 +2,7 @@
 
 A terminal UI for browsing and applying animated video wallpapers via [mpvpaper](https://github.com/GhostNaN/mpvpaper).
 
-<video src="showcase/animation.mp4" poster="showcase/screenshot.png" autoplay loop muted playsinline></video>
+![screenshot](showcase/screenshot.png)
 
 ## Dependencies
 
@@ -79,6 +79,10 @@ make uninstall-service
 # (GNOME, KDE, XFCE, and Wayland compositors paired with dex or similar)
 install -Dm644 mpv-wallpaper.desktop ~/.config/autostart/mpv-wallpaper.desktop
 ```
+
+## Preview animation
+
+![demo](showcase/animation.gif)
 
 ## Usage
 
