@@ -2,7 +2,7 @@
 
 A terminal UI for browsing and applying animated video wallpapers via [mpvpaper](https://github.com/GhostNaN/mpvpaper).
 
-![screenshot](screenshot.png)
+<video src="showcase/animation.mp4" poster="showcase/screenshot.png" autoplay loop muted playsinline></video>
 
 ## Dependencies
 

@@ -8,8 +8,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"mpv-wallpaper-tui/domain"
 	xdraw "golang.org/x/image/draw"
@@ -57,15 +59,46 @@ func extractFramesToFiles(videoPath string, maxFrames int) ([]string, error) {
 }
 
 func collectFramePaths(dir string, max int) []string {
-	var paths []string
-	for i := 1; i <= max; i++ {
-		p := filepath.Join(dir, fmt.Sprintf("f%04d.jpg", i))
-		if _, err := os.Stat(p); err != nil {
-			break
-		}
-		paths = append(paths, p)
+	matches, _ := filepath.Glob(filepath.Join(dir, "f????.jpg"))
+	if len(matches) > max {
+		matches = matches[:max]
 	}
-	return paths
+	return matches
+}
+
+// renderEachFrame calls render for each path concurrently, preserving order
+// and silently skipping frames where render returns an error.
+func renderEachFrame(paths []string, render func(string) (string, error)) ([]string, error) {
+	type result struct {
+		idx   int
+		frame string
+	}
+	results := make([]result, 0, len(paths))
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	for i, fp := range paths {
+		wg.Add(1)
+		go func(i int, fp string) {
+			defer wg.Done()
+			frame, err := render(fp)
+			if err != nil {
+				return
+			}
+			mu.Lock()
+			results = append(results, result{i, frame})
+			mu.Unlock()
+		}(i, fp)
+	}
+	wg.Wait()
+	sort.Slice(results, func(a, b int) bool { return results[a].idx < results[b].idx })
+	frames := make([]string, 0, len(results))
+	for _, r := range results {
+		frames = append(frames, r.frame)
+	}
+	if len(frames) == 0 {
+		return nil, fmt.Errorf("no frames rendered")
+	}
+	return frames, nil
 }
 
 // ── HalfBlockPreviewer ────────────────────────────────────────────────────────
@@ -98,23 +131,18 @@ func (p *HalfBlockPreviewer) RenderFrames(w domain.Wallpaper, cols, rows int) ([
 	if err != nil {
 		return nil, err
 	}
-	frames := make([]string, 0, len(paths))
-	for _, fp := range paths {
+	return renderEachFrame(paths, func(fp string) (string, error) {
 		f, err := os.Open(fp)
 		if err != nil {
-			continue
+			return "", err
 		}
+		defer f.Close()
 		img, _, err := image.Decode(f)
-		f.Close()
 		if err != nil {
-			continue
+			return "", err
 		}
-		frames = append(frames, renderHalfBlocks(img, cols, rows))
-	}
-	if len(frames) == 0 {
-		return nil, fmt.Errorf("no frames rendered")
-	}
-	return frames, nil
+		return renderHalfBlocks(img, cols, rows), nil
+	})
 }
 
 // renderHalfBlocks renders src into cols×rows terminal character cells.
