@@ -3,7 +3,7 @@ package ui
 import "github.com/charmbracelet/lipgloss"
 
 var (
-	orange = lipgloss.Color("#ffa07a")
+	accent = lipgloss.Color("2")   // ANSI green
 	muted  = lipgloss.Color("240")
 	black  = lipgloss.Color("0")
 
@@ -13,7 +13,7 @@ var (
 
 	titleStyle = lipgloss.NewStyle().
 			Bold(true).
-			Foreground(orange)
+			Foreground(accent)
 
 	itemStyle = lipgloss.NewStyle().
 			PaddingLeft(2)
@@ -21,7 +21,7 @@ var (
 	// selectedStyle: cursor is here AND this section is focused.
 	selectedStyle = lipgloss.NewStyle().
 			PaddingLeft(2).
-			Background(orange).
+			Background(accent).
 			Foreground(black).
 			Bold(true)
 
@@ -29,7 +29,7 @@ var (
 	// (e.g. the chosen monitor while navigating wallpapers).
 	activeStyle = lipgloss.NewStyle().
 			PaddingLeft(2).
-			Foreground(orange).
+			Foreground(accent).
 			Bold(true)
 
 	helpStyle = lipgloss.NewStyle().
