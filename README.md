@@ -8,13 +8,13 @@ A terminal UI for browsing and applying animated video wallpapers via [mpvpaper]
 
 ### Runtime
 
-| Tool | Purpose |
-|------|---------|
-| [mpvpaper](https://github.com/GhostNaN/mpvpaper) | Sets animated video wallpapers |
-| [ffmpeg](https://ffmpeg.org) | Extracts the first frame for preview |
-| [chafa](https://hpjansson.org/chafa/) *(optional)* | Higher-quality terminal image preview |
+| Tool | Required | Purpose |
+|------|----------|---------|
+| [mpvpaper](https://github.com/GhostNaN/mpvpaper) | yes | Renders video wallpapers on Wayland outputs |
+| [ffmpeg](https://ffmpeg.org) | yes | Extracts frames for preview and animation |
+| [chafa](https://hpjansson.org/chafa/) | no | Higher-quality terminal image rendering |
 
-If `chafa` is on your `$PATH` the app uses it for previews; otherwise it falls back to a built-in half-block Unicode renderer that requires no extra tools.
+If `chafa` is on your `$PATH` it is used for previews; otherwise the app falls back to a built-in half-block Unicode renderer that requires no extra tools.
 
 **Arch Linux:**
 ```bash
