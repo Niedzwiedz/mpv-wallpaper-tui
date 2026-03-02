@@ -127,7 +127,7 @@ func (m *Model) handleGridKey(key string) tea.Cmd {
 	case "ctrl+c", "q":
 		return tea.Quit
 
-	case "v", "esc":
+	case "v":
 		m.gridMode = false
 		m.clearCaches()
 		m.frameIdx = 0
@@ -260,38 +260,44 @@ func (m *Model) loadPreviewCmd(idx int) tea.Cmd {
 }
 
 // loadWallpaperCmd returns a command that renders w at the given dimensions.
-// When animated is true and the previewer supports animation, two concurrent
-// commands are returned: a fast static render and a slower full-frame render.
+// When animated is true and the previewer supports animation, frames are loaded
+// even if a static preview is already cached.
 func (m *Model) loadWallpaperCmd(w domain.Wallpaper, animated bool, cols, rows int) tea.Cmd {
-	if _, cached := m.previews[w.Path]; cached {
-		return nil
+	_, hasStatic := m.previews[w.Path]
+	_, hasFrames := m.frames[w.Path]
+
+	if hasFrames {
+		return nil // already fully loaded
 	}
-	if _, cached := m.frames[w.Path]; cached {
-		return nil
+	if !animated && hasStatic {
+		return nil // static-only load already done
 	}
 	if m.loading[w.Path] {
-		return nil
+		return nil // load already in flight
 	}
 	m.loading[w.Path] = true
 	previewer := m.previewer
 
 	if animated {
 		if ap, ok := previewer.(domain.AnimatedPreviewer); ok {
-			staticCmd := func() tea.Msg {
-				content, err := previewer.Render(w, cols, rows)
-				if err != nil {
-					return nil
-				}
-				return previewReady{path: w.Path, content: content}
+			var cmds []tea.Cmd
+			if !hasStatic {
+				cmds = append(cmds, func() tea.Msg {
+					content, err := previewer.Render(w, cols, rows)
+					if err != nil {
+						return nil
+					}
+					return previewReady{path: w.Path, content: content}
+				})
 			}
-			framesCmd := func() tea.Msg {
+			cmds = append(cmds, func() tea.Msg {
 				frames, err := ap.RenderFrames(w, cols, rows)
 				if err != nil || len(frames) == 0 {
 					return nil
 				}
 				return framesReady{path: w.Path, frames: frames}
-			}
-			return tea.Batch(staticCmd, framesCmd)
+			})
+			return tea.Batch(cmds...)
 		}
 	}
 

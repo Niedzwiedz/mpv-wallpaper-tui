@@ -48,7 +48,7 @@ func (m *Model) helpBar() string {
 			"  h/j/k/l  navigate    ↵/space  apply" +
 				"    m: monitor(" + mon.Label() + ")" +
 				"    a: anim(" + anim + ")" +
-				"    v/esc: list" +
+				"    v: list" +
 				"    q  quit",
 		)
 	}
