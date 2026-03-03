@@ -96,7 +96,7 @@ func (m *Model) handleKey(key string) tea.Cmd {
 			return m.startTick()
 		}
 
-	case "v":
+	case "tab":
 		m.gridMode = true
 		m.clearCaches()
 		m.grid.populate(m.list.roots)
@@ -120,7 +120,7 @@ func (m *Model) handleGridKey(key string) tea.Cmd {
 	case "ctrl+c", "q":
 		return tea.Quit
 
-	case "v":
+	case "tab":
 		m.gridMode = false
 		m.clearCaches()
 		m.frameIdx = 0

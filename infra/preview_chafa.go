@@ -32,6 +32,10 @@ func chafaRender(path, size string) (string, error) {
 	return strings.TrimRight(string(out), "\n"), nil
 }
 
+func (p *ChafaPreviewer) Name() string {
+	return "chafa"
+}
+
 func (p *ChafaPreviewer) Render(w domain.Wallpaper, cols, rows int) (string, error) {
 	tmp, err := extractFrameToFile(w.Path)
 	if err != nil {

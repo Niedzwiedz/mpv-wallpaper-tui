@@ -39,26 +39,39 @@ func (m *Model) mainView() string {
 
 func (m *Model) helpBar() string {
 	mon := m.selectedMonitor()
+	renderer := m.previewer.Name()
 	anim := "on"
+
+	var left string
+	var bar string
+
 	if !m.animating {
 		anim = "off"
 	}
+
+	right := " RENDER: " + renderer + "  "
 	if m.gridMode {
-		return helpStyle.Render(
-			"  h/j/k/l  navigate    ↵/space  apply" +
+		left = 	"  h/j/k/l  navigate    ↵/space  apply" +
 				"    m: monitor(" + mon.Label() + ")" +
 				"    a: anim(" + anim + ")" +
-				"    v: list" +
-				"    q  quit",
-		)
+				"    tab: list" +
+				"    q  quit"
+	} else {
+		left = 	"  ↑/k ↓/j  navigate    l/→ open    h/← close    ↵/space  apply" +
+				"    m: monitor(" + mon.Label() + ")" +
+				"    a: anim(" + anim + ")" +
+				"    tab: grid" +
+				"    q  quit"
 	}
-	return helpStyle.Render(
-		"  ↑/k ↓/j  navigate    l/→ open    h/← close    ↵/space  apply" +
-			"    m: monitor(" + mon.Label() + ")" +
-			"    a: anim(" + anim + ")" +
-			"    v: grid" +
-			"    q  quit",
-	)
+	gap := m.availW() - lipgloss.Width(left) - lipgloss.Width(right)
+
+	if gap < 1 {
+		bar = left
+	} else {
+		bar = left + strings.Repeat(" ", gap) + right
+	}
+
+	return helpStyle.Render(bar)
 }
 
 // ── List panel ────────────────────────────────────────────────────────────────

@@ -109,7 +109,7 @@ mpv-wallpaper-tui
 | `→` / `l` | Open folder |
 | `←` / `h` | Close folder / go to parent |
 | `↵` / `space` | Apply selected wallpaper |
-| `v` | Switch to grid view |
+| `tab` | Switch to grid view |
 | `m` | Open monitor selector |
 | `a` | Toggle preview animation on/off |
 | `q` / `Ctrl+C` | Quit |
@@ -122,7 +122,7 @@ mpv-wallpaper-tui
 | `gg` | Jump to first wallpaper |
 | `G` | Jump to last wallpaper |
 | `↵` / `space` | Apply selected wallpaper |
-| `v` | Switch back to list view |
+| `tab` | Switch back to list view |
 | `m` | Open monitor selector |
 | `a` | Toggle preview animation on/off |
 | `q` / `Ctrl+C` | Quit |
