@@ -6,7 +6,7 @@ SERVICE_DIR  := $(HOME)/.config/systemd/user
 .PHONY: build install uninstall install-service uninstall-service install-autostart uninstall-autostart
 
 build:
-	go build -o $(BINARY) .
+	go build -o $(BINARY) ./cmd/$(BINARY)/
 
 install: build
 	install -Dm755 $(BINARY) $(DESTDIR)/$(BINARY)
@@ -15,7 +15,7 @@ uninstall:
 	rm -f $(DESTDIR)/$(BINARY)
 
 install-service: install
-	install -Dm644 $(SERVICE_NAME).service $(SERVICE_DIR)/$(SERVICE_NAME).service
+	install -Dm644 configs/$(SERVICE_NAME).service $(SERVICE_DIR)/$(SERVICE_NAME).service
 	systemctl --user daemon-reload
 	systemctl --user enable --now $(SERVICE_NAME)
 

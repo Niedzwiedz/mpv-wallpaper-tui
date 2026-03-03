@@ -6,9 +6,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"mpv-wallpaper-tui/config"
-	"mpv-wallpaper-tui/infra"
-	"mpv-wallpaper-tui/ui"
+	"mpv-wallpaper-tui/internal/config"
+	"mpv-wallpaper-tui/internal/infra"
+	"mpv-wallpaper-tui/internal/ui"
 )
 
 func main() {

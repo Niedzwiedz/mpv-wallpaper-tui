@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"mpv-wallpaper-tui/domain"
+	"mpv-wallpaper-tui/internal/domain"
 
 	"github.com/charmbracelet/lipgloss"
 )

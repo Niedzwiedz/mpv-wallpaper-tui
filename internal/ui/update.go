@@ -3,7 +3,7 @@ package ui
 import (
 	"time"
 
-	"mpv-wallpaper-tui/domain"
+	"mpv-wallpaper-tui/internal/domain"
 
 	tea "github.com/charmbracelet/bubbletea"
 )

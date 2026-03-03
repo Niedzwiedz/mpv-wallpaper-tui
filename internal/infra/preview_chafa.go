@@ -5,7 +5,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"mpv-wallpaper-tui/domain"
+	"mpv-wallpaper-tui/internal/domain"
 )
 
 // ChafaPreviewer renders wallpaper previews by piping an extracted frame

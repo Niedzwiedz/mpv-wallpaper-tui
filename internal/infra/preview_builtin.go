@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"mpv-wallpaper-tui/domain"
+	"mpv-wallpaper-tui/internal/domain"
 	xdraw "golang.org/x/image/draw"
 )
 

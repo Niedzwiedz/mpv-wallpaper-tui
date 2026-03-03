@@ -2,7 +2,7 @@
 
 A terminal UI for browsing and applying animated video wallpapers via [mpvpaper](https://github.com/GhostNaN/mpvpaper).
 
-![screenshot](showcase/screenshot.png)
+![screenshot](assets/screenshot.png)
 
 ## Views
 
@@ -10,13 +10,13 @@ A terminal UI for browsing and applying animated video wallpapers via [mpvpaper]
 
 Browse wallpapers in a folder tree with an animated preview panel on the right.
 
-![list animation](showcase/animation.gif)
+![list animation](assets/animation.gif)
 
 ### Grid view
 
 Press `v` to switch to a thumbnail grid. Navigate with `hjkl`, press `v` again to return.
 
-![grid view](showcase/grid.gif)
+![grid view](assets/grid.gif)
 
 ## Dependencies
 

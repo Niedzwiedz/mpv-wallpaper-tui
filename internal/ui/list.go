@@ -3,7 +3,7 @@ package ui
 import (
 	"strings"
 
-	"mpv-wallpaper-tui/domain"
+	"mpv-wallpaper-tui/internal/domain"
 )
 
 // flatEntry is one visible row in the wallpaper tree.

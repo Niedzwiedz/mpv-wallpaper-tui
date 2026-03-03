@@ -1,6 +1,6 @@
 package ui
 
-import "mpv-wallpaper-tui/domain"
+import "mpv-wallpaper-tui/internal/domain"
 
 // gridModel owns the navigation state for the grid view.
 type gridModel struct {

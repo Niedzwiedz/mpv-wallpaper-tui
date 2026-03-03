@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"mpv-wallpaper-tui/domain"
+	"mpv-wallpaper-tui/internal/domain"
 )
 
 var videoExts = map[string]bool{

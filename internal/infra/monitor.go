@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"mpv-wallpaper-tui/domain"
+	"mpv-wallpaper-tui/internal/domain"
 )
 
 // MonitorDetector discovers available display outputs.
