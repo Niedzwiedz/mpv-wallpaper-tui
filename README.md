@@ -14,7 +14,7 @@ Browse wallpapers in a folder tree with an animated preview panel on the right.
 
 ### Grid view
 
-Press `v` to switch to a thumbnail grid. Navigate with `hjkl`, press `v` again to return.
+Press `tab` to switch to a thumbnail grid. Navigate with `hjkl`, press `tab` again to switch back.
 
 ![grid view](assets/grid.gif)
 
