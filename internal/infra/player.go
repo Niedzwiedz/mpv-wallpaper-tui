@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"mpv-wallpaper-tui/domain"
+	"mpv-wallpaper-tui/internal/domain"
 )
 
 // MpvPlayer applies wallpapers via mpvpaper, tracking one PID and one wallpaper

@@ -5,7 +5,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"mpv-wallpaper-tui/domain"
+	"mpv-wallpaper-tui/internal/domain"
 )
 
 // ChafaPreviewer renders wallpaper previews by piping an extracted frame
@@ -30,6 +30,10 @@ func chafaRender(path, size string) (string, error) {
 		return "", fmt.Errorf("chafa: %w", err)
 	}
 	return strings.TrimRight(string(out), "\n"), nil
+}
+
+func (p *ChafaPreviewer) Name() string {
+	return "chafa"
 }
 
 func (p *ChafaPreviewer) Render(w domain.Wallpaper, cols, rows int) (string, error) {

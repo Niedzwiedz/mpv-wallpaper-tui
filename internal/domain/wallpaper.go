@@ -55,6 +55,7 @@ type Player interface {
 
 // Previewer renders a terminal image preview for a wallpaper.
 type Previewer interface {
+	Name() string
 	Render(w Wallpaper, cols, rows int) (string, error)
 }
 

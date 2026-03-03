@@ -1,7 +1,7 @@
 package ui
 
 import (
-	"mpv-wallpaper-tui/domain"
+	"mpv-wallpaper-tui/internal/domain"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -12,20 +12,17 @@ const (
 	marginV    = 1  // top AND bottom margin in terminal rows (each side)
 )
 
-// flatEntry is one visible row in the wallpaper tree.
-type flatEntry struct {
-	node  *domain.Node
-	depth int
+type Options struct {
+	Animation bool
+	DefaultView string
 }
 
 // Model is the root Bubble Tea model.
 // Dependencies are injected via New; the model owns only UI state.
 type Model struct {
-	roots    []*domain.Node
-	expanded map[string]bool
-	flat     []flatEntry
-	cursor   int
-	scroll   int // first visible index in the wallpaper list
+	list     listModel
+	grid     gridModel
+	gridMode bool
 
 	monitors           []domain.Monitor
 	monitorCursor      int
@@ -33,9 +30,12 @@ type Model struct {
 	modalOpen          bool
 	modalContentW      int // pre-computed modal width
 
+	// Shared preview cache (used by both list and grid rendering paths).
 	previews map[string]string
 	frames   map[string][]string
 	loading  map[string]bool
+
+	// Animation clock (shared across both views).
 	frameIdx  int
 	tickGen   int
 	animating bool
@@ -53,16 +53,28 @@ func New(
 	monitors []domain.Monitor,
 	player domain.Player,
 	previewer domain.Previewer,
+	opts Options,
 ) *Model {
 	modalW := 36
+	gridMode := false
+	if opts.DefaultView == "grid" {
+		gridMode = true
+	}
+
 	for _, mon := range monitors {
 		if l := len([]rune(mon.Label())) + 6; l > modalW {
 			modalW = l
 		}
 	}
-	m := &Model{
-		roots:         roots,
-		expanded:      make(map[string]bool),
+	g := gridModel{}
+	if gridMode {
+		g.populate(roots)
+	}
+
+	return &Model{
+		list:          newListModel(roots),
+		grid:          g,
+		gridMode:      gridMode,
 		monitors:      monitors,
 		previews:      make(map[string]string),
 		frames:        make(map[string][]string),
@@ -70,28 +82,17 @@ func New(
 		player:        player,
 		previewer:     previewer,
 		modalContentW: modalW,
-		animating:     true,
+		animating:     opts.Animation,
 	}
-	m.flat = buildFlat(roots, m.expanded, 0)
-	return m
 }
 
 func (m *Model) Init() tea.Cmd { return nil }
 
-func (m *Model) current() *flatEntry {
-	if m.cursor < 0 || m.cursor >= len(m.flat) {
-		return nil
-	}
-	return &m.flat[m.cursor]
-}
-
 func (m *Model) currentWallpaper() *domain.Wallpaper {
-	e := m.current()
-	if e == nil || e.node.IsDir {
-		return nil
+	if m.gridMode {
+		return m.grid.currentWallpaper()
 	}
-	w := e.node.Wallpaper()
-	return &w
+	return m.list.currentWallpaper()
 }
 
 func (m *Model) selectedMonitor() domain.Monitor {
@@ -114,45 +115,4 @@ func (m *Model) previewDims() (cols, rows int) {
 		rows = 20
 	}
 	return
-}
-
-// wallpaperListH returns how many rows the wallpaper list can display.
-func (m *Model) wallpaperListH() int {
-	h := m.availH() - 4 - 2 // panel innerH minus list header (title + blank)
-	if h < 1 {
-		h = 1
-	}
-	return h
-}
-
-func (m *Model) clampScroll() {
-	h := m.wallpaperListH()
-	if m.cursor < m.scroll {
-		m.scroll = m.cursor
-	}
-	if m.cursor >= m.scroll+h {
-		m.scroll = m.cursor - h + 1
-	}
-	if m.scroll < 0 {
-		m.scroll = 0
-	}
-}
-
-func (m *Model) rebuildFlat() {
-	m.flat = buildFlat(m.roots, m.expanded, 0)
-	if m.cursor >= len(m.flat) {
-		m.cursor = max(0, len(m.flat)-1)
-	}
-	m.clampScroll()
-}
-
-func buildFlat(nodes []*domain.Node, expanded map[string]bool, depth int) []flatEntry {
-	var out []flatEntry
-	for _, n := range nodes {
-		out = append(out, flatEntry{node: n, depth: depth})
-		if n.IsDir && expanded[n.Path] {
-			out = append(out, buildFlat(n.Children, expanded, depth+1)...)
-		}
-	}
-	return out
 }

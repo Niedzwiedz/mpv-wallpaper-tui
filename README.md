@@ -2,7 +2,21 @@
 
 A terminal UI for browsing and applying animated video wallpapers via [mpvpaper](https://github.com/GhostNaN/mpvpaper).
 
-![screenshot](showcase/screenshot.png)
+![screenshot](assets/screenshot.png)
+
+## Views
+
+### List view
+
+Browse wallpapers in a folder tree with an animated preview panel on the right.
+
+![list animation](assets/animation.gif)
+
+### Grid view
+
+Press `tab` to switch to a thumbnail grid. Navigate with `hjkl`, press `tab` again to switch back.
+
+![grid view](assets/grid.gif)
 
 ## Dependencies
 
@@ -80,15 +94,13 @@ make uninstall-service
 install -Dm644 mpv-wallpaper.desktop ~/.config/autostart/mpv-wallpaper.desktop
 ```
 
-## Preview animation
-
-![demo](showcase/animation.gif)
-
 ## Usage
 
 ```bash
 mpv-wallpaper-tui
 ```
+
+### List view
 
 | Key | Action |
 |-----|--------|
@@ -97,11 +109,25 @@ mpv-wallpaper-tui
 | `→` / `l` | Open folder |
 | `←` / `h` | Close folder / go to parent |
 | `↵` / `space` | Apply selected wallpaper |
+| `tab` | Switch to grid view |
 | `m` | Open monitor selector |
 | `a` | Toggle preview animation on/off |
 | `q` / `Ctrl+C` | Quit |
 
-**Monitor selector** (`m`):
+### Grid view
+
+| Key | Action |
+|-----|--------|
+| `h` / `j` / `k` / `l` | Navigate left / down / up / right |
+| `gg` | Jump to first wallpaper |
+| `G` | Jump to last wallpaper |
+| `↵` / `space` | Apply selected wallpaper |
+| `tab` | Switch back to list view |
+| `m` | Open monitor selector |
+| `a` | Toggle preview animation on/off |
+| `q` / `Ctrl+C` | Quit |
+
+### Monitor selector (`m`)
 
 | Key | Action |
 |-----|--------|
@@ -129,12 +155,28 @@ On first launch the app creates its config directory automatically.
 
 ```toml
 # Path to the directory containing wallpaper video files.
-wallpapers_path = "/home/user/.config/mpv-wallpaper-tui/wallpapers"
+wallpapers_path = "~/.config/mpv-wallpaper-tui/wallpapers"
+
+# Enable preview animation on startup.
+animation = true
+
+# Which view to open on launch: "list" or "grid".
+default_view = "list"
+
+# Colour overrides — ANSI index (e.g. "2") or hex (e.g. "#ffa07a").
+# Leave empty to follow your terminal's ANSI palette.
+[colors]
+accent = ""
+muted  = ""
 ```
 
 | Option | Default | Description |
 |--------|---------|-------------|
 | `wallpapers_path` | `~/.config/mpv-wallpaper-tui/wallpapers` | Directory scanned for video files |
+| `animation` | `true` | Whether preview animation is enabled on startup |
+| `default_view` | `"list"` | View shown on launch: `"list"` or `"grid"` |
+| `colors.accent` | `""` | Highlight colour — ANSI index (`"2"`) or hex (`"#ffa07a"`). Empty = terminal default |
+| `colors.muted` | `""` | Dimmed text colour — ANSI index (`"240"`) or hex. Empty = terminal default |
 
 `wallpapers_path` supports `~/` expansion. Supported video formats: `.mp4`, `.mkv`, `.webm`, `.avi`, `.mov`.
 

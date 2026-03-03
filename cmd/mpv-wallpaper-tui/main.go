@@ -6,9 +6,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"mpv-wallpaper-tui/config"
-	"mpv-wallpaper-tui/infra"
-	"mpv-wallpaper-tui/ui"
+	"mpv-wallpaper-tui/internal/config"
+	"mpv-wallpaper-tui/internal/infra"
+	"mpv-wallpaper-tui/internal/ui"
 )
 
 func main() {
@@ -31,7 +31,15 @@ func main() {
 
 	monitors := infra.NewMonitorDetector().List()
 
-	model := ui.New(roots, monitors, infra.NewMpvPlayer(), infra.NewAutoPreviewer())
+	ui.InitStyles(cfg.Colors.Accent, cfg.Colors.Muted)
+
+	model := ui.New(
+		roots,
+		monitors,
+		infra.NewMpvPlayer(),
+		infra.NewAutoPreviewer(),
+		ui.Options{Animation: cfg.Animation, DefaultView: cfg.DefaultView},
+	)
 
 	if _, err := tea.NewProgram(model, tea.WithAltScreen()).Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
