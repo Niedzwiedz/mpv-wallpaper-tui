@@ -33,25 +33,14 @@ func (g *gridModel) cols(availW int) int {
 
 func (g *gridModel) cellDims(availW int) (cols, rows int) {
 	numCols := g.cols(availW)
-	cols = availW/numCols - 1
-	if cols < 10 {
-		cols = 10
-	}
-	rows = cols / 5
-	if rows < 3 {
-		rows = 3
-	}
+	cols = max(10, availW/numCols-1)
+	rows = max(3, cols/5)
 	return
 }
 
 func (g *gridModel) visibleRows(availW, availH int) int {
 	_, cellRows := g.cellDims(availW)
-	cellH := cellRows + 1 + 2
-	v := (availH - 1) / cellH
-	if v < 1 {
-		return 1
-	}
-	return v
+	return max(1, (availH-1)/(cellRows+1+2))
 }
 
 func (g *gridModel) clampScroll(availW, availH int) {
@@ -64,9 +53,7 @@ func (g *gridModel) clampScroll(availW, availH int) {
 	if curRow >= g.scroll+visRows {
 		g.scroll = curRow - visRows + 1
 	}
-	if g.scroll < 0 {
-		g.scroll = 0
-	}
+	g.scroll = max(0, g.scroll)
 }
 
 func (g *gridModel) moveRight(availW, availH int) bool {

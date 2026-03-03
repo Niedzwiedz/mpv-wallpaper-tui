@@ -47,11 +47,7 @@ func (l *listModel) currentWallpaper() *domain.Wallpaper {
 }
 
 func (l *listModel) wallpaperListH(availH int) int {
-	h := availH - 4 - 2
-	if h < 1 {
-		h = 1
-	}
-	return h
+	return max(1, availH-4-2)
 }
 
 func (l *listModel) clampScroll(availH int) {
@@ -62,9 +58,7 @@ func (l *listModel) clampScroll(availH int) {
 	if l.cursor >= l.scroll+h {
 		l.scroll = l.cursor - h + 1
 	}
-	if l.scroll < 0 {
-		l.scroll = 0
-	}
+	l.scroll = max(0, l.scroll)
 }
 
 func (l *listModel) rebuildFlat(availH int) {

@@ -3,8 +3,8 @@ package infra
 import (
 	"fmt"
 	"image"
-	"strings"
 	"os"
+	"strings"
 
 	"mpv-wallpaper-tui/domain"
 	xdraw "golang.org/x/image/draw"
@@ -12,30 +12,22 @@ import (
 
 // HalfBlockPreviewer renders wallpaper previews using ▀ half-block glyphs
 // with 24-bit ANSI colour codes. No external tools beyond ffmpeg required.
-
 type HalfBlockPreviewer struct{}
 
 func NewHalfBlockPreviewer() *HalfBlockPreviewer { return &HalfBlockPreviewer{} }
+
+func (p *HalfBlockPreviewer) Name() string { return "builtin" }
 
 func (p *HalfBlockPreviewer) Render(w domain.Wallpaper, cols, rows int) (string, error) {
 	tmp, err := extractFrameToFile(w.Path)
 	if err != nil {
 		return "", fmt.Errorf("extract frame from %q: %w", w.Path, err)
 	}
-	f, err := os.Open(tmp)
+	img, err := decodeImageFromFile(tmp)
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
-	img, _, err := image.Decode(f)
-	if err != nil {
-		return "", fmt.Errorf("decode frame: %w", err)
-	}
 	return renderHalfBlocks(img, cols, rows), nil
-}
-
-func (p *HalfBlockPreviewer) Name() string {
-	return "builtin"
 }
 
 func (p *HalfBlockPreviewer) RenderFrames(w domain.Wallpaper, cols, rows int) ([]string, error) {
@@ -44,17 +36,25 @@ func (p *HalfBlockPreviewer) RenderFrames(w domain.Wallpaper, cols, rows int) ([
 		return nil, err
 	}
 	return renderEachFrame(paths, func(fp string) (string, error) {
-		f, err := os.Open(fp)
-		if err != nil {
-			return "", err
-		}
-		defer f.Close()
-		img, _, err := image.Decode(f)
+		img, err := decodeImageFromFile(fp)
 		if err != nil {
 			return "", err
 		}
 		return renderHalfBlocks(img, cols, rows), nil
 	})
+}
+
+func decodeImageFromFile(path string) (image.Image, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	img, _, err := image.Decode(f)
+	if err != nil {
+		return nil, fmt.Errorf("decode %q: %w", path, err)
+	}
+	return img, nil
 }
 
 // renderHalfBlocks renders src into cols×rows terminal character cells.
@@ -70,8 +70,8 @@ func renderHalfBlocks(src image.Image, cols, rows int) string {
 	xdraw.BiLinear.Scale(dst, dst.Bounds(), src, src.Bounds(), xdraw.Over, nil)
 
 	var sb strings.Builder
-	for row := 0; row < rows; row++ {
-		for col := 0; col < cols; col++ {
+	for row := range rows {
+		for col := range cols {
 			top := dst.RGBAAt(col, row*2)
 			bot := dst.RGBAAt(col, row*2+1)
 			fmt.Fprintf(&sb,

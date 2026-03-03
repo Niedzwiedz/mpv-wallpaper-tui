@@ -39,39 +39,27 @@ func (m *Model) mainView() string {
 
 func (m *Model) helpBar() string {
 	mon := m.selectedMonitor()
-	renderer := m.previewer.Name()
 	anim := "on"
-
-	var left string
-	var bar string
-
 	if !m.animating {
 		anim = "off"
 	}
 
-	right := " RENDER: " + renderer + "  "
+	nav, toggle := "  ↑/k ↓/j  navigate    l/→ open    h/← close    ↵/space  apply", "    tab: grid"
 	if m.gridMode {
-		left = 	"  h/j/k/l  navigate    ↵/space  apply" +
-				"    m: monitor(" + mon.Label() + ")" +
-				"    a: anim(" + anim + ")" +
-				"    tab: list" +
-				"    q  quit"
-	} else {
-		left = 	"  ↑/k ↓/j  navigate    l/→ open    h/← close    ↵/space  apply" +
-				"    m: monitor(" + mon.Label() + ")" +
-				"    a: anim(" + anim + ")" +
-				"    tab: grid" +
-				"    q  quit"
+		nav, toggle = "  h/j/k/l  navigate    ↵/space  apply", "    tab: list"
 	}
+	left := nav +
+		"    m: monitor(" + mon.Label() + ")" +
+		"    a: anim(" + anim + ")" +
+		toggle +
+		"    q  quit"
+
+	right := " RENDER: " + m.previewer.Name() + "  "
 	gap := m.availW() - lipgloss.Width(left) - lipgloss.Width(right)
-
 	if gap < 1 {
-		bar = left
-	} else {
-		bar = left + strings.Repeat(" ", gap) + right
+		return helpStyle.Render(left)
 	}
-
-	return helpStyle.Render(bar)
+	return helpStyle.Render(left + strings.Repeat(" ", gap) + right)
 }
 
 // ── List panel ────────────────────────────────────────────────────────────────
@@ -108,10 +96,7 @@ func (m *Model) listPanel(innerH int) string {
 // ── Preview panel ─────────────────────────────────────────────────────────────
 
 func (m *Model) previewPanel(innerH int) string {
-	w := m.availW() - listPanelW - 3
-	if w < 10 {
-		w = 10
-	}
+	w := max(10, m.availW()-listPanelW-3)
 	return panelStyle.
 		Width(w).
 		Height(innerH).
