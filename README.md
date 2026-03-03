@@ -155,12 +155,28 @@ On first launch the app creates its config directory automatically.
 
 ```toml
 # Path to the directory containing wallpaper video files.
-wallpapers_path = "/home/user/.config/mpv-wallpaper-tui/wallpapers"
+wallpapers_path = "~/.config/mpv-wallpaper-tui/wallpapers"
+
+# Enable preview animation on startup.
+animation = true
+
+# Which view to open on launch: "list" or "grid".
+default_view = "list"
+
+# Colour overrides — ANSI index (e.g. "2") or hex (e.g. "#ffa07a").
+# Leave empty to follow your terminal's ANSI palette.
+[colors]
+accent = ""
+muted  = ""
 ```
 
 | Option | Default | Description |
 |--------|---------|-------------|
 | `wallpapers_path` | `~/.config/mpv-wallpaper-tui/wallpapers` | Directory scanned for video files |
+| `animation` | `true` | Whether preview animation is enabled on startup |
+| `default_view` | `"list"` | View shown on launch: `"list"` or `"grid"` |
+| `colors.accent` | `""` | Highlight colour — ANSI index (`"2"`) or hex (`"#ffa07a"`). Empty = terminal default |
+| `colors.muted` | `""` | Dimmed text colour — ANSI index (`"240"`) or hex. Empty = terminal default |
 
 `wallpapers_path` supports `~/` expansion. Supported video formats: `.mp4`, `.mkv`, `.webm`, `.avi`, `.mov`.
 

@@ -14,6 +14,14 @@ const appName = "mpv-wallpaper-tui"
 // Config holds all application settings.
 type Config struct {
 	WallpapersPath string `toml:"wallpapers_path"`
+	Animation      bool   `toml:"animation"`
+	DefaultView    string `toml:"default_view"`
+	Colors         Colors `toml:"colors"`
+}
+
+type Colors struct {
+	Accent string `toml:"accent"`
+	Muted  string `toml:"muted"`
 }
 
 // Load reads the config file, writing defaults if it does not yet exist.
@@ -59,6 +67,9 @@ func appConfigDir() (string, error) {
 func defaults(appDir string) *Config {
 	return &Config{
 		WallpapersPath: filepath.Join(appDir, "wallpapers"),
+		Animation: true,
+		DefaultView: "list",
+		Colors: Colors{},
 	}
 }
 
@@ -72,8 +83,19 @@ func writeDefaults(path string, cfg *Config) error {
 
 	_, err = fmt.Fprintf(f,
 		"# Path to the directory containing wallpaper video files.\n"+
-			"wallpapers_path = %q\n",
+			"wallpapers_path = %q\n\n"+
+			"# Enable preview animation on startup.\n"+
+			"animation = %t\n\n"+
+			"# Which view to open on launch: \"list\" or \"grid\".\n"+
+			"default_view = %q\n\n"+
+			"# Colour overrides — ANSI index (e.g. \"2\") or hex (e.g. \"#ffa07a\").\n"+
+			"# Leave empty to follow your terminal's ANSI palette.\n"+
+			"[colors]\n"+
+			"accent = \"\"\n"+
+			"muted  = \"\"\n",
 		cfg.WallpapersPath,
+		cfg.Animation,
+		cfg.DefaultView,
 	)
 	return err
 }

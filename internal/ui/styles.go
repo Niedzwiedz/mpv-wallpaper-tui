@@ -38,3 +38,34 @@ var (
 	dimStyle = lipgloss.NewStyle().
 			Foreground(muted)
 )
+
+// InitStyles applies optional colour overrides from config and rebuilds all
+// style vars. Must be called before creating the Model.
+func InitStyles(overrideAccent, overrideMuted string) {
+	if overrideAccent != "" {
+		accent = lipgloss.Color(overrideAccent)
+	}
+	if overrideMuted != "" {
+		muted = lipgloss.Color(overrideMuted)
+	}
+	// Rebuild derived styles so they pick up the updated colours.
+	panelStyle = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(muted)
+	titleStyle = lipgloss.NewStyle().
+		Bold(true).
+		Foreground(accent)
+	selectedStyle = lipgloss.NewStyle().
+		PaddingLeft(2).
+		Background(accent).
+		Foreground(black).
+		Bold(true)
+	activeStyle = lipgloss.NewStyle().
+		PaddingLeft(2).
+		Foreground(accent).
+		Bold(true)
+	helpStyle = lipgloss.NewStyle().
+		Foreground(muted)
+	dimStyle = lipgloss.NewStyle().
+		Foreground(muted)
+}

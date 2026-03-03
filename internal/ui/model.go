@@ -12,6 +12,11 @@ const (
 	marginV    = 1  // top AND bottom margin in terminal rows (each side)
 )
 
+type Options struct {
+	Animation bool
+	DefaultView string
+}
+
 // Model is the root Bubble Tea model.
 // Dependencies are injected via New; the model owns only UI state.
 type Model struct {
@@ -48,16 +53,28 @@ func New(
 	monitors []domain.Monitor,
 	player domain.Player,
 	previewer domain.Previewer,
+	opts Options,
 ) *Model {
 	modalW := 36
+	gridMode := false
+	if opts.DefaultView == "grid" {
+		gridMode = true
+	}
+
 	for _, mon := range monitors {
 		if l := len([]rune(mon.Label())) + 6; l > modalW {
 			modalW = l
 		}
 	}
+	g := gridModel{}
+	if gridMode {
+		g.populate(roots)
+	}
+
 	return &Model{
 		list:          newListModel(roots),
-		grid:          gridModel{},
+		grid:          g,
+		gridMode:      gridMode,
 		monitors:      monitors,
 		previews:      make(map[string]string),
 		frames:        make(map[string][]string),
@@ -65,7 +82,7 @@ func New(
 		player:        player,
 		previewer:     previewer,
 		modalContentW: modalW,
-		animating:     true,
+		animating:     opts.Animation,
 	}
 }
 
